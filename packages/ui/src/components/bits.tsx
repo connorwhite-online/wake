@@ -6,23 +6,26 @@ export function Prose({ html }: { html: string }) {
   return <div className="prose" dangerouslySetInnerHTML={{ __html: html }} />;
 }
 
-const STATE_VAR: Record<string, string> = {
-  triage: 'var(--state-triage)',
-  todo: 'var(--state-todo)',
-  'in-progress': 'var(--state-in-progress)',
-  blocked: 'var(--state-blocked)',
-  done: 'var(--state-done)',
-  dropped: 'var(--state-dropped)',
-};
+/** Deterministic hue from an actor name → soft gradient orb. No assets, no JS per frame. */
+export function orbHue(name: string): number {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) % 360;
+  return h;
+}
+
+export function Orb({ name, size = 18 }: { name: string; size?: number }) {
+  return (
+    <span
+      className="orb"
+      title={name}
+      style={{ ['--orb-h' as string]: orbHue(name), width: size, height: size }}
+    />
+  );
+}
 
 export function StateBadge({ state }: { state: string | null }) {
   if (!state) return null;
-  return (
-    <span className="state-badge">
-      <span className="state-dot" style={{ background: STATE_VAR[state] ?? 'var(--ink-faint)' }} />
-      {state}
-    </span>
-  );
+  return <span className={`state-badge state-${state}`}>{state}</span>;
 }
 
 export function TagList({ tags }: { tags: string[] }) {
@@ -57,6 +60,7 @@ export function Timeline({ rows, since }: { rows: ActivityRow[]; since?: string 
     <ul className="timeline">
       {rows.map((a, i) => (
         <li key={`${a.node_id}-${a.ts}-${i}`}>
+          <Orb name={a.actor} />
           <span className="what">
             {since && a.ts > since && <span className="new-marker" title="since your last visit" />}
             <span className="actor">{a.actor}</span>{' '}

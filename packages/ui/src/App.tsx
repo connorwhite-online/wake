@@ -1,6 +1,7 @@
 import { Route, Routes } from 'react-router-dom';
 import Layout from './components/Layout';
 import Home from './routes/Home';
+import Projects from './routes/Projects';
 import Project from './routes/Project';
 import NodePage from './routes/NodePage';
 import DocsIndex from './routes/DocsIndex';
@@ -12,6 +13,7 @@ export default function App() {
     <Routes>
       <Route element={<Layout />}>
         <Route path="/" element={<Home />} />
+        <Route path="/projects" element={<Projects />} />
         <Route path="/p/:slug" element={<Project />} />
         <Route path="/i/:id" element={<NodePage />} />
         <Route path="/docs" element={<DocsIndex />} />
