@@ -115,7 +115,7 @@ If the wake MCP server is available, use its tools (`create_node`,
 `link`, `regenerate_status`) — they validate frontmatter, enforce the
 derived-field rules above, and write activity events for you. If MCP isn't
 available, raw file edits are still legal: files are ground truth and the
-indexer (watcher or `wake reindex`) picks up any well-formed change. Just
+indexer (watcher or `wake index`) picks up any well-formed change. Just
 follow this document by hand — write valid frontmatter, append rather than
 rewrite activity logs, and don't touch derived fields.
 
