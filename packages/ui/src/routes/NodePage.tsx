@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { api, relTime, withToken, type NodePayload } from '../api';
-import { Prose, StateBadge, TagList, SectionLabel, Timeline } from '../components/bits';
+import { NodeChip, Prose, StateBadge, TagList, SectionLabel, Timeline } from '../components/bits';
 
 export default function NodePage() {
   const { id } = useParams<{ id: string }>();
@@ -52,22 +52,22 @@ export default function NodePage() {
       {links.length > 0 && (
         <>
           <SectionLabel count={links.length}>links</SectionLabel>
-          {links.map((l) => (
-            <div key={l.id}>
-              {l.kind} → <Link to={l.url}>{l.title}</Link>
-            </div>
-          ))}
+          <div>
+            {links.map((l) => (
+              <NodeChip key={`${l.id}-${l.kind}`} node={l} kind={l.kind} />
+            ))}
+          </div>
         </>
       )}
 
       {backlinks.length > 0 && (
         <>
           <SectionLabel count={backlinks.length}>backlinks</SectionLabel>
-          {backlinks.map((l) => (
-            <div key={l.id}>
-              {l.kind} ← <Link to={l.url}>{l.title}</Link>
-            </div>
-          ))}
+          <div>
+            {backlinks.map((l) => (
+              <NodeChip key={`${l.id}-${l.kind}`} node={l} kind={l.kind} />
+            ))}
+          </div>
         </>
       )}
 

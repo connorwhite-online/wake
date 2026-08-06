@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { api, relTime, type NodePayload } from '../api';
-import { Prose, TagList, SectionLabel } from '../components/bits';
+import { NodeChip, Prose, TagList, SectionLabel } from '../components/bits';
 
 export default function Doc() {
   const params = useParams();
@@ -42,11 +42,11 @@ export default function Doc() {
       {backlinks.length > 0 && (
         <>
           <SectionLabel count={backlinks.length}>backlinks</SectionLabel>
-          {backlinks.map((l) => (
-            <div key={l.id}>
-              {l.title} — {l.kind}
-            </div>
-          ))}
+          <div>
+            {backlinks.map((l) => (
+              <NodeChip key={`${l.id}-${l.kind}`} node={l} kind={l.kind} />
+            ))}
+          </div>
         </>
       )}
     </div>
