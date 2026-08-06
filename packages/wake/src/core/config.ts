@@ -18,5 +18,7 @@ export function requireWorkspace(explicit?: string): string {
 }
 
 export function dbPath(workspace: string): string {
-  return path.join(workspace, DB_FILE);
+  // WAKE_DB relocates the index for read-only filesystems (e.g. serverless,
+  // where the workspace ships in the bundle and only /tmp is writable).
+  return process.env.WAKE_DB ? path.resolve(process.env.WAKE_DB) : path.join(workspace, DB_FILE);
 }

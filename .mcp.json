@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "wake": {
+      "type": "http",
+      "url": "${WAKE_URL}/mcp",
+      "headers": {
+        "Authorization": "Bearer ${WAKE_TOKEN}"
+      }
+    }
+  }
+}

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { api, relTime, type NodePayload } from '../api';
+import { api, relTime, withToken, type NodePayload } from '../api';
 import { Prose, StateBadge, TagList, SectionLabel, Timeline } from '../components/bits';
 
 export default function NodePage() {
@@ -41,7 +41,7 @@ export default function NodePage() {
 
       {artifact && (
         <p className="page-meta">
-          <a href={artifact.url}>
+          <a href={withToken(artifact.url)}>
             download {artifact.file} · {artifact.mime}
           </a>
         </p>

@@ -82,6 +82,63 @@ activity/log.ndjson                   # workspace-level events
 .wake/index.db                        # disposable SQLite index (gitignored)
 ```
 
+## Deploy to the cloud (writable — agents everywhere)
+
+`wake serve` now exposes the MCP server over **streamable HTTP at `/mcp`** in
+the same process as the UI and API, so a single deployed instance is both the
+write surface for agents anywhere and the reading surface for you.
+
+Deploy the included `Dockerfile` on anything with a persistent disk —
+`fly.toml` is ready for Fly.io:
+
+```bash
+fly launch --no-deploy
+fly volumes create wake_data --size 1
+fly secrets set WAKE_TOKEN=$(openssl rand -hex 24)   # required before exposing
+fly deploy
+```
+
+(No CLI on hand? Railway builds the `Dockerfile` straight from the GitHub
+repo in the browser: connect repo → attach a volume at `/data` → set
+`WAKE_TOKEN` → deploy.)
+
+Then wake is a URL, and **any agent anywhere** writes to it:
+
+- **Cloud coding agents** — drop this repo's `.mcp.json` into any project
+  (it references `WAKE_URL` + `WAKE_TOKEN` from the environment, so no
+  secrets are committed). Every Claude Code session spun up on that repo —
+  web, mobile, desktop, CI — gets the wake tools automatically. Nothing about
+  wake assumes a desktop.
+- **Claude apps** — add the `/mcp` URL once as a custom connector and wake's
+  tools are available in chats on your phone.
+- **One-off** — `claude mcp add --transport http wake https://<app>/mcp
+  --header "Authorization: Bearer <token>"`, or any MCP-capable runtime.
+
+The UI at the root prompts once for the token and remembers it.
+
+Env knobs: `WAKE_TOKEN` (bearer auth for `/mcp` and `/api` — without it,
+anyone who reaches the port can read and write), `WAKE_GIT_SYNC=1`
+(debounced auto-commit of the workspace so git history stays the record),
+`WAKE_GIT_PUSH=1` (also push — add a remote with credentials to the volume's
+workspace first), `WAKE_HOST`/`PORT`.
+
+## Deploy to Vercel (read-only)
+
+The repo deploys as a **read-only mirror** of `workspace/`: the UI is static,
+and the API runs as a serverless function that rebuilds the SQLite index into
+`/tmp` on cold start from the workspace files bundled with the deployment.
+
+1. Import the repo in Vercel (or `npx vercel` from the root). `vercel.json`
+   already carries the build command, output directory, function config, and
+   SPA rewrites — no settings needed.
+2. Every push to the production branch redeploys, so the flow is: agents write
+   locally over MCP → you commit/push the workspace → the hosted wake updates.
+   Reading from your phone needs nothing else.
+
+Writes (MCP, `wake serve` watcher) stay local by design — the deployment is
+the reading surface, git is the sync. Set `WAKE_SPACE` in Vercel only if your
+workspace lives somewhere other than `workspace/`.
+
 ## Development
 
 ```bash
