@@ -21,5 +21,6 @@ ENV NODE_ENV=production \
 
 EXPOSE 8722
 
-# first boot on an empty volume scaffolds the workspace, then serve
-CMD ["sh", "-c", "test -d \"$WAKE_SPACE/projects\" || node packages/wake/dist/cli.js init --space \"$WAKE_SPACE\"; exec node packages/wake/dist/cli.js serve --space \"$WAKE_SPACE\" --port \"$PORT\""]
+# empty volume → bootstrap from the repo's workspace/ (or init blank), then serve
+RUN chmod +x docker-entrypoint.sh
+CMD ["./docker-entrypoint.sh"]
