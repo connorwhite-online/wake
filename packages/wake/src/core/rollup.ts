@@ -9,6 +9,7 @@ import type { NodeSummary } from './search.js';
 
 const RECENT_DAYS = 14;
 const ACTIVE_HINT_DAYS = 3;
+const SPARK_DAYS = 30;
 
 export interface IssueRef {
   id: string;
@@ -22,6 +23,9 @@ export interface Rollup {
   project_id: string;
   project_title: string;
   counts: Record<string, number>;
+  total: number;
+  /** one entry per day, oldest first — the shape of recent effort */
+  activity_by_day: { day: string; count: number }[];
   now: IssueRef[];
   blocked: (IssueRef & { blocked_by: { id: string; title: string }[] })[];
   recently_done: IssueRef[];
@@ -105,10 +109,31 @@ export function computeRollup(ws: Workspace, projectId: string, today = new Date
     .recentActivity(200)
     .filter((a) => a.node_id === projectId || issues.some((i) => i.id === a.node_id));
 
+  // daily event counts across the project and its issues, zero-filled
+  const perDay = new Map(
+    (
+      ws.db
+        .prepare(
+          `SELECT substr(ts, 1, 10) AS day, COUNT(*) AS c FROM activity
+           WHERE ts >= @since AND (node_id = @id OR node_id IN
+             (SELECT id FROM nodes WHERE type = 'issue' AND project_id = @id))
+           GROUP BY day`,
+        )
+        .all({ since: dayCutoff(SPARK_DAYS, today), id: projectId }) as { day: string; c: number }[]
+    ).map((r) => [r.day, r.c] as const),
+  );
+  const activityByDay: { day: string; count: number }[] = [];
+  for (let i = SPARK_DAYS - 1; i >= 0; i--) {
+    const day = dayCutoff(i, today).slice(0, 10);
+    activityByDay.push({ day, count: perDay.get(day) ?? 0 });
+  }
+
   return {
     project_id: projectId,
     project_title: project.title as string,
     counts,
+    total: issues.length,
+    activity_by_day: activityByDay,
     now: inProgress.map(ref),
     blocked,
     recently_done: issues.filter((i) => i.state === 'done' && i.updated >= recentCutoff).map(ref),

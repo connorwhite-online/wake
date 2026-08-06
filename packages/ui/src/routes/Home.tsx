@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { api, takeLastVisit, relTime, type HomePayload } from '../api';
-import { Empty, Prose, Timeline } from '../components/bits';
+import { Empty, Orb, Prose, Timeline } from '../components/bits';
+import { RollupPanel } from '../components/charts';
 
 export default function Home() {
   const { space = '' } = useParams<{ space: string }>();
@@ -48,7 +49,8 @@ export default function Home() {
           ) : (
             data.statuses.map((s) => (
               <div className="status-card" key={s.project_id}>
-                <Link to={`/s/${space}/p/${s.slug}`} className="page-title" style={{ fontSize: '1.1rem', display: 'block' }}>
+                <Link to={`/s/${space}/p/${s.slug}`} className="status-project">
+                  <Orb name={s.title} size={24} />
                   {s.title}
                 </Link>
                 <div className="status-meta">
@@ -56,6 +58,7 @@ export default function Home() {
                   {s.generated_by ? ` by ${s.generated_by}` : ''}
                 </div>
                 <Prose html={s.summary_html} />
+                <RollupPanel rollup={s.rollup} compact />
               </div>
             ))
           )}

@@ -33,6 +33,7 @@ export interface StatusSummary {
   generated: string | null;
   generated_by: string | null;
   summary_html: string;
+  rollup: Rollup;
 }
 
 export type ProjectSummary = NodeSummary & { counts: Record<string, number>; last_active: string | null };
@@ -63,9 +64,38 @@ export interface HomePayload {
   activity: ActivityRow[];
 }
 
+export interface IssueRef {
+  id: string;
+  title: string;
+  state: string;
+  updated: string;
+  last_activity: string | null;
+}
+
+/** Computed live from the index on every request — charts are never stale. */
+export interface Rollup {
+  project_id: string;
+  project_title: string;
+  counts: Record<string, number>;
+  total: number;
+  activity_by_day: { day: string; count: number }[];
+  now: IssueRef[];
+  blocked: (IssueRef & { blocked_by: { id: string; title: string }[] })[];
+  recently_done: IssueRef[];
+  stale: IssueRef[];
+  active_hint: IssueRef[];
+  latest_activity: { ts: string; actor: string; kind: string; node_title: string; summary: string }[];
+}
+
 export interface ProjectPayload {
   project: NodeSummary & { body_html: string };
-  status: { generated: string | null; generated_by: string | null; html: string } | null;
+  status: {
+    generated: string | null;
+    generated_by: string | null;
+    html: string;
+    summary_html: string;
+  } | null;
+  rollup: Rollup;
   issues: Record<string, NodeSummary[]>;
   timeline: ActivityRow[];
   docs: NodeSummary[];

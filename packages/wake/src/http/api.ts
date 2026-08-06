@@ -8,6 +8,7 @@ import type { Workspace } from '../core/workspace.js';
 import type { Hub, SpaceInfo } from '../core/spaces.js';
 import { loadUser } from '../core/spaces.js';
 import { renderMarkdown, nodeUrl } from '../core/markdown.js';
+import { computeRollup } from '../core/rollup.js';
 import { loadSettings } from '../core/settings.js';
 import { rowToSummary, type NodeSummary } from '../core/search.js';
 
@@ -140,11 +141,13 @@ export function buildApi(hub: Hub, bus: EventEmitter): Hono {
       .list({ type: 'project' })
       .map((p) => ({ ...withUrl(ws, p), counts: issueCounts(ws, p.id), last_active: ws.projectLastActive(p.id) }))
       .sort((a, b) => (b.last_active ?? b.updated).localeCompare(a.last_active ?? a.updated));
+    // the rollup is computed live from the index, so charts are never stale —
+    // only the agent's prose is stored
     const statuses = ws
       .list({ type: 'project' })
       .map((p) => readStatus(ws, p))
       .filter((s): s is StatusInfo => s !== null)
-      .map(({ full_html: _full, ...rest }) => rest);
+      .map(({ full_html: _full, ...rest }) => ({ ...rest, rollup: computeRollup(ws, rest.project_id) }));
     return c.json({ projects, statuses, activity: activityWithUrls(ws, ws.recentActivity(60)) });
   });
 
@@ -176,8 +179,14 @@ export function buildApi(hub: Hub, bus: EventEmitter): Hono {
     return c.json({
       project: { ...withUrl(ws, project), body_html: renderMarkdown(ws, node.body) },
       status: status
-        ? { generated: status.generated, generated_by: status.generated_by, html: status.full_html }
+        ? {
+            generated: status.generated,
+            generated_by: status.generated_by,
+            html: status.full_html,
+            summary_html: status.summary_html,
+          }
         : null,
+      rollup: computeRollup(ws, project.id),
       issues: grouped,
       timeline,
       docs: ws

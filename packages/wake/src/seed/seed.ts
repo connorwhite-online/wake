@@ -546,11 +546,12 @@ export function runSeed(root: string, opts: { force?: boolean } = {}): {
   // ---------- index + status ----------
 
   const ws = Workspace.open(root);
+  // short on purpose: the reading UI renders the counts, so prose says what
+  // moved and what is stuck, not what the numbers already show
   const summaryProse =
-    `Core data model, the SQLite/FTS5 index, and artifact storage are done; the file watcher and the ` +
-    `regenerate_status handshake are actively in progress. Real-time SSE updates are blocked on the watcher ` +
-    `landing first. Estimates/sprint planning was deliberately dropped as out of scope, and the since-last-visit ` +
-    `diffing work has been idle for a couple of weeks and needs a nudge.`;
+    `The watcher and the regenerate_status handshake are the live edges of the work. ` +
+    `SSE updates can't start until the watcher lands, and the since-last-visit diffing has been quiet ` +
+    `for two weeks — it needs a nudge or a drop.`;
   writeStatus(ws, projectId, summaryProse, 'claude-code');
   ws.close();
 
