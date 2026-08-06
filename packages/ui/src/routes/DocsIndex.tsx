@@ -8,7 +8,7 @@ export default function DocsIndex() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    document.title = 'wake · docs';
+    document.title = 'wake · resources';
   }, []);
 
   useEffect(() => {
@@ -18,9 +18,9 @@ export default function DocsIndex() {
       .catch((e) => setError(String(e.message ?? e)));
   }, []);
 
-  if (error) return <p className="empty">could not load docs — {error}</p>;
+  if (error) return <p className="empty">could not load resources — {error}</p>;
   if (!docs) return <p className="empty">loading…</p>;
-  if (docs.length === 0) return <p className="empty">no docs yet</p>;
+  if (docs.length === 0) return <p className="empty">no resources yet</p>;
 
   const groups = new Map<string, NodeSummary[]>();
   for (const doc of docs) {
@@ -35,7 +35,7 @@ export default function DocsIndex() {
 
   return (
     <div>
-      <h1 className="page-title">docs</h1>
+      <h1 className="page-title">resources</h1>
       {sortedGroups.map((group) => {
         const rows = groups.get(group)!.slice().sort((a, b) => a.title.localeCompare(b.title));
         return (

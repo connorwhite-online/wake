@@ -31,17 +31,17 @@
   --h-done: 150;    --c-done: 0.09;
   --h-dropped: 80;  --c-dropped: 0.005;
 
-  --shadow-card: 0 1px 2px oklch(0.2 0.02 60 / 0.05), 0 8px 28px -8px oklch(0.2 0.02 60 / 0.1);
-  --shadow-lift: 0 2px 4px oklch(0.2 0.02 60 / 0.06), 0 14px 36px -10px oklch(0.2 0.02 60 / 0.14);
-  --shadow-bar: 0 -1px 2px oklch(0.2 0.02 60 / 0.04), 0 -8px 28px -12px oklch(0.2 0.02 60 / 0.12);
+  --shadow-card: 0 2px 4px oklch(0.2 0.02 60 / 0.06), 0 12px 32px -8px oklch(0.2 0.02 60 / 0.13);
+  --shadow-lift: 0 3px 6px oklch(0.2 0.02 60 / 0.07), 0 18px 44px -10px oklch(0.2 0.02 60 / 0.18);
+  --shadow-bar: 0 -2px 4px oklch(0.2 0.02 60 / 0.05), 0 -10px 32px -12px oklch(0.2 0.02 60 / 0.15);
 
   --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   /* serif retired for now — everything rides the inert system stack */
   --serif: var(--sans);
   --mono: ui-monospace, 'SF Mono', 'Cascadia Code', Menlo, Consolas, monospace;
 
-  --r-lg: 20px;
-  --r-md: 12px;
+  --r-lg: 24px;
+  --r-md: 14px;
   --measure: 42rem;
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
 }
@@ -229,7 +229,7 @@ a:hover { text-decoration: underline; text-underline-offset: 3px; }
     letter-spacing: 0.02em;
     transition: color 0.15s var(--ease), background 0.15s var(--ease);
   }
-  .tab svg { width: 20px; height: 20px; }
+  .tab svg { width: 23px; height: 23px; }
   .tab:hover { text-decoration: none; }
   .tab.active { color: var(--ink); background: var(--accent-soft); }
 }
@@ -311,23 +311,19 @@ a.card:active, .card-link:active { transform: scale(0.985); }
   background: radial-gradient(circle at 32% 28%, var(--orb-a), var(--orb-b));
 }
 
-/* state pills */
+/* state pills — hue/chroma arrive as inline --sh/--sc from workspace settings */
 .state-badge {
-  display: inline-flex; align-items: center; gap: 0.35em;
-  font-size: 0.72rem; font-weight: 600; white-space: nowrap;
-  padding: 0.14rem 0.6rem; border-radius: 999px;
+  display: inline-flex; align-items: center; gap: 0.4em;
+  font-size: 0.74rem; font-weight: 650; white-space: nowrap;
+  padding: 0.22rem 0.7rem; border-radius: 999px;
+  --sh: 80; --sc: 0.01;
   background: oklch(0.94 calc(var(--sc) * 0.3) var(--sh));
   color: oklch(0.42 var(--sc) var(--sh));
 }
+.state-badge svg { width: 13px; height: 13px; flex-shrink: 0; }
 @media (prefers-color-scheme: dark) {
   .state-badge { background: oklch(0.33 calc(var(--sc) * 0.45) var(--sh)); color: oklch(0.85 calc(var(--sc) * 0.75) var(--sh)); }
 }
-.state-triage { --sh: var(--h-triage); --sc: var(--c-triage); }
-.state-todo { --sh: var(--h-todo); --sc: var(--c-todo); }
-.state-in-progress { --sh: var(--h-progress); --sc: var(--c-progress); }
-.state-blocked { --sh: var(--h-blocked); --sc: var(--c-blocked); }
-.state-done { --sh: var(--h-done); --sc: var(--c-done); }
-.state-dropped { --sh: var(--h-dropped); --sc: var(--c-dropped); opacity: 0.65; }
 
 .tag {
   font-size: 0.72rem; color: var(--ink-soft);

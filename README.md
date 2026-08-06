@@ -139,6 +139,25 @@ Writes (MCP, `wake serve` watcher) stay local by design — the deployment is
 the reading surface, git is the sync. Set `WAKE_SPACE` in Vercel only if your
 workspace lives somewhere other than `workspace/`.
 
+## Customizing states
+
+Issue states keep six canonical keys (`triage | todo | in-progress | blocked |
+done | dropped`) — agents and the status rules depend on their semantics — but
+what they're **called** and **colored** is yours. Drop a `wake.json` in the
+workspace root:
+
+```json
+{
+  "states": {
+    "in-progress": { "label": "doing", "hue": 300 },
+    "done": { "label": "shipped" }
+  }
+}
+```
+
+`hue`/`chroma` are OKLCH values feeding the state pills; edits show up on the
+next page load, no restart.
+
 ## Development
 
 ```bash
