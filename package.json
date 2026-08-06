@@ -1,0 +1,15 @@
+{
+  "name": "wake-monorepo",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces",
+    "test": "npm test -w packages/wake",
+    "dev:ui": "npm run dev -w packages/ui",
+    "wake": "node packages/wake/dist/cli.js"
+  }
+}
