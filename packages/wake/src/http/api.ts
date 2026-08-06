@@ -6,6 +6,7 @@ import type { EventEmitter } from 'node:events';
 import matter from 'gray-matter';
 import type { Workspace } from '../core/workspace.js';
 import { renderMarkdown, nodeUrl } from '../core/markdown.js';
+import { loadSettings } from '../core/settings.js';
 import { rowToSummary, type NodeSummary } from '../core/search.js';
 
 function issueCounts(ws: Workspace, projectId: string): Record<string, number> {
@@ -98,6 +99,11 @@ function nodePayload(ws: Workspace, id: string) {
 
 export function buildApi(ws: Workspace, bus: EventEmitter): Hono {
   const app = new Hono();
+
+  app.get('/api/meta', (c) => {
+    // settings re-read per request so a wake.json edit shows up on refresh
+    return c.json(loadSettings(ws.root));
+  });
 
   const projectList = () =>
     ws

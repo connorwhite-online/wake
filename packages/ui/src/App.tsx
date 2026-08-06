@@ -1,6 +1,7 @@
 import { Route, Routes } from 'react-router-dom';
 import Gate from './components/Gate';
 import Layout from './components/Layout';
+import { MetaProvider } from './meta';
 import Home from './routes/Home';
 import Projects from './routes/Projects';
 import Project from './routes/Project';
@@ -12,7 +13,9 @@ import Search from './routes/Search';
 export default function App() {
   return (
     <Gate>
-      <AppRoutes />
+      <MetaProvider>
+        <AppRoutes />
+      </MetaProvider>
     </Gate>
   );
 }

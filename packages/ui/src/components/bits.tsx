@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { relTime, eventSummary, type ActivityRow, type NodeSummary } from '../api';
+import { useStateStyle } from '../meta';
 
 export function Prose({ html }: { html: string }) {
   // Server-side sanitized (rehype-sanitize) — the only HTML source is our own API.
@@ -23,9 +24,77 @@ export function Orb({ name, size = 18 }: { name: string; size?: number }) {
   );
 }
 
+/* Chunky per-state glyphs — 2.6 stroke, one clear shape each. */
+function StateIcon({ state }: { state: string }) {
+  const common = {
+    viewBox: '0 0 24 24',
+    fill: 'none',
+    stroke: 'currentColor',
+    strokeWidth: 2.6,
+    strokeLinecap: 'round' as const,
+    strokeLinejoin: 'round' as const,
+  };
+  switch (state) {
+    case 'triage': // funnel
+      return (
+        <svg {...common}>
+          <path d="M4 5h16l-6 7v5l-4 2v-7L4 5z" />
+        </svg>
+      );
+    case 'todo': // open circle
+      return (
+        <svg {...common}>
+          <circle cx="12" cy="12" r="8" />
+        </svg>
+      );
+    case 'in-progress': // half-filled circle
+      return (
+        <svg {...common}>
+          <circle cx="12" cy="12" r="8" />
+          <path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor" stroke="none" />
+        </svg>
+      );
+    case 'blocked': // stop octagon
+      return (
+        <svg {...common}>
+          <path d="M8.5 4h7l4.5 4.5v7L15.5 20h-7L4 15.5v-7L8.5 4z" />
+        </svg>
+      );
+    case 'done': // check circle
+      return (
+        <svg {...common}>
+          <circle cx="12" cy="12" r="8" />
+          <path d="M8.5 12.5l2.5 2.5 4.5-5" />
+        </svg>
+      );
+    case 'dropped': // slash circle
+      return (
+        <svg {...common}>
+          <circle cx="12" cy="12" r="8" />
+          <path d="M7.5 16.5l9-9" />
+        </svg>
+      );
+    default:
+      return (
+        <svg {...common}>
+          <circle cx="12" cy="12" r="8" />
+        </svg>
+      );
+  }
+}
+
 export function StateBadge({ state }: { state: string | null }) {
-  if (!state) return null;
-  return <span className={`state-badge state-${state}`}>{state}</span>;
+  const style = useStateStyle(state);
+  if (!state || !style) return null;
+  return (
+    <span
+      className="state-badge"
+      style={{ ['--sh' as string]: style.hue, ['--sc' as string]: style.chroma }}
+    >
+      <StateIcon state={state} />
+      {style.label}
+    </span>
+  );
 }
 
 export function TagList({ tags }: { tags: string[] }) {

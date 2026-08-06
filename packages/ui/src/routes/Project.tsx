@@ -66,9 +66,9 @@ export default function Project() {
         );
       })}
 
-      <h2 className="section-label">linked docs</h2>
+      <h2 className="section-label">resources</h2>
       {docs.length === 0 ? (
-        <p className="empty">no docs linked yet</p>
+        <p className="empty">no resources linked yet</p>
       ) : (
         docs.map((doc) => (
           <div key={doc.id}>

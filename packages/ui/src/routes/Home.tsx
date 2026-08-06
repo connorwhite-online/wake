@@ -12,7 +12,7 @@ export default function Home() {
   useEffect(() => {
     sinceRef.current = takeLastVisit();
     setSince(sinceRef.current);
-    document.title = 'wake · the wake';
+    document.title = 'wake · home';
   }, []);
 
   useEffect(() => {
@@ -22,7 +22,7 @@ export default function Home() {
       .catch((e) => setError(String(e.message ?? e)));
   }, []);
 
-  if (error) return <p className="empty">could not load the wake — {error}</p>;
+  if (error) return <p className="empty">could not load home — {error}</p>;
   if (!data) return <p className="empty">loading…</p>;
 
   const newCount = since ? data.activity.filter((a) => a.ts > since).length : 0;
@@ -58,7 +58,7 @@ export default function Home() {
             ))
           )}
 
-          <h2 className="section-label">the wake</h2>
+          <h2 className="section-label">activity</h2>
           <Timeline rows={data.activity} since={since} />
         </>
       )}

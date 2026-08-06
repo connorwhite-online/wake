@@ -4,24 +4,24 @@ import { api, type ProjectSummary } from '../api';
 
 function Icon({ d }: { d: string }) {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
       <path d={d} />
     </svg>
   );
 }
 
-// minimal single-path glyphs: wake ripples, folder, page, magnifier
+// chunky glyphs: house, folder, stacked pages, magnifier
 const ICONS = {
-  wake: 'M2 12c2.5-2.5 5-2.5 7.5 0s5 2.5 7.5 0 4-2 5 0M2 17c2.5-2.5 5-2.5 7.5 0s5 2.5 7.5 0 4-2 5 0M2 7c2.5-2.5 5-2.5 7.5 0s5 2.5 7.5 0 4-2 5 0',
-  projects: 'M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z',
-  docs: 'M7 3h7l5 5v11a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zM14 3v5h5',
-  search: 'M11 19a8 8 0 1 1 0-16 8 8 0 0 1 0 16zM21 21l-4.3-4.3',
+  home: 'M4 11l8-7 8 7M6 9.5V19a1 1 0 0 0 1 1h3.5v-5h3v5H17a1 1 0 0 0 1-1V9.5',
+  projects: 'M3 7.5a2 2 0 0 1 2-2h4l2 2.5h8a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-9.5z',
+  resources: 'M7 3.5h7l4.5 4.5v10.5a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-13a2 2 0 0 1 2-2zM13.5 3.5V9H19',
+  search: 'M11 18.5a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15zM20.5 20.5l-4-4',
 };
 
 const TABS = [
-  { to: '/', label: 'wake', icon: ICONS.wake, end: true },
+  { to: '/', label: 'home', icon: ICONS.home, end: true },
   { to: '/projects', label: 'projects', icon: ICONS.projects, end: false },
-  { to: '/docs', label: 'docs', icon: ICONS.docs, end: false },
+  { to: '/docs', label: 'resources', icon: ICONS.resources, end: false },
   { to: '/search', label: 'search', icon: ICONS.search, end: false },
 ];
 
@@ -67,10 +67,10 @@ export default function Layout() {
         </div>
         <nav className="nav-section">
           <NavLink to="/" end className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>
-            the wake
+            home
           </NavLink>
           <NavLink to="/docs" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>
-            docs
+            resources
           </NavLink>
         </nav>
         {projects.length > 0 && (
