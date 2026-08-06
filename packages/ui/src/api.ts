@@ -120,6 +120,19 @@ export function relTime(iso: string): string {
   return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
+/** Terse form for dense lists: "now", "9h", "3d", "Aug 6". */
+export function compactTime(iso: string): string {
+  const ms = Date.now() - new Date(iso).getTime();
+  const min = Math.floor(ms / 60_000);
+  if (min < 1) return 'now';
+  if (min < 60) return `${min}m`;
+  const h = Math.floor(min / 60);
+  if (h < 24) return `${h}h`;
+  const d = Math.floor(h / 24);
+  if (d < 7) return `${d}d`;
+  return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
+
 export function eventSummary(a: ActivityRow): string {
   const p = a.payload as Record<string, string | undefined>;
   switch (a.kind) {

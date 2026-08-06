@@ -371,7 +371,7 @@ span.wiki-broken {
 
 .section-label {
   font-size: 0.7rem; font-weight: 650; letter-spacing: 0.13em; text-transform: uppercase;
-  color: var(--ink-faint); margin: 2.3rem 0 0.7rem;
+  color: var(--ink-faint); margin: 1.8rem 0 0.55rem;
   display: flex; align-items: center; gap: 0.5rem;
 }
 .section-label::before {
@@ -454,29 +454,73 @@ li:hover > .orb, .card-link:hover .orb { transform: scale(1.15); }
 .tag:hover { background: var(--card); color: var(--ink); }
 .tag-list { display: inline-flex; gap: 0.3rem; flex-wrap: wrap; }
 
-/* issue rows — the whole row is the link */
+/* state glyph alone — dense lists, where the group header carries the name */
+.state-dot {
+  display: inline-flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  --sh: 80; --sc: 0.01;
+  color: oklch(0.55 var(--sc) var(--sh));
+}
+.state-dot svg { width: 15px; height: 15px; }
+@media (prefers-color-scheme: dark) {
+  .state-dot { color: oklch(0.74 var(--sc) var(--sh)); }
+}
+
+/* issue rows — one line per issue, whole row clickable (Linear's list) */
 .issue-row {
-  display: flex; align-items: center; gap: 0.65rem;
-  padding: 0.6rem 0.65rem;
-  margin: 0 -0.65rem;
-  border-radius: var(--r-md);
+  display: flex; align-items: center; gap: 0.6rem;
+  padding: 0.36rem 0.6rem;
+  margin: 0 -0.6rem;
+  border-radius: 10px;
   color: inherit;
-  min-height: 44px;
+  min-height: 38px;
   transition: background 0.14s var(--ease-out), transform 0.12s var(--ease-out);
 }
-.issue-row:hover { background: var(--card); text-decoration: none; }
-.issue-row:active { transform: scale(0.985); }
+.issue-row:active { transform: scale(0.99); }
 .issue-row + .issue-row { border-top: 1px solid var(--rule); }
-.issue-row:hover + .issue-row { border-top-color: transparent; }
-.issue-row .title { flex: 1; min-width: 0; color: var(--ink); font-size: 0.95rem; font-weight: 500; }
-.issue-row .when { color: var(--ink-faint); font-size: 0.77rem; white-space: nowrap; }
-.issue-row .chevron {
-  width: 15px; height: 15px; color: var(--ink-faint); flex-shrink: 0;
-  opacity: 0; transform: translateX(-4px);
-  transition: opacity 0.15s var(--ease-out), transform 0.15s var(--ease-out);
+.issue-row .title {
+  flex: 1; min-width: 0;
+  color: var(--ink); font-size: 0.94rem; font-weight: 500;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.issue-row:hover .chevron { opacity: 1; transform: translateX(0); }
+.issue-row .row-meta {
+  display: flex; align-items: center; gap: 0.4rem;
+  flex-shrink: 0;
+}
+.issue-row .when { color: var(--ink-faint); font-size: 0.76rem; white-space: nowrap; }
+.issue-row .chevron { display: none; }
 .issue-row.dropped .title { color: var(--ink-faint); text-decoration: line-through; }
+
+@media (hover: hover) {
+  .issue-row:hover { background: var(--card); text-decoration: none; }
+  .issue-row:hover + .issue-row { border-top-color: transparent; }
+  .issue-row .chevron {
+    display: block;
+    width: 15px; height: 15px; color: var(--ink-faint); flex-shrink: 0;
+    opacity: 0; transform: translateX(-4px);
+    transition: opacity 0.15s var(--ease-out), transform 0.15s var(--ease-out);
+  }
+  .issue-row:hover .chevron { opacity: 1; transform: translateX(0); }
+}
+
+/* search results keep two lines: title line + snippet */
+.result-row {
+  display: flex; align-items: flex-start; gap: 0.6rem;
+  padding: 0.6rem;
+  margin: 0 -0.6rem;
+  border-radius: var(--r-md);
+  color: inherit;
+  transition: background 0.14s var(--ease-out), transform 0.12s var(--ease-out);
+}
+.result-row + .result-row { border-top: 1px solid var(--rule); }
+.result-row .state-dot { margin-top: 0.15rem; }
+.result-row .result-body { flex: 1; min-width: 0; }
+.result-row .result-title { color: var(--ink); font-size: 0.94rem; font-weight: 550; }
+.result-row:active { transform: scale(0.99); }
+@media (hover: hover) {
+  .result-row:hover { background: var(--card); text-decoration: none; }
+  .result-row:hover + .result-row { border-top-color: transparent; }
+}
 
 .timeline { list-style: none; margin: 0; padding: 0; }
 .timeline li {
@@ -517,15 +561,21 @@ li:hover > .orb, .card-link:hover .orb { transform: scale(1.15); }
   animation: pulse-dot 2.4s var(--ease) infinite;
 }
 
+/* touch devices: no sticky hover — :active carries the feedback instead */
+@media (hover: none) {
+  a.card:hover, .card-link:hover { transform: none; box-shadow: var(--shadow-card); }
+  .node-chip:hover { transform: none; box-shadow: var(--shadow-card), var(--chip-inset); }
+  .nav-link:hover { background: transparent; color: var(--ink-soft); }
+  .tag:hover { background: transparent; color: var(--ink-soft); }
+  .wiki-link:hover { background: transparent; color: var(--ink); }
+}
+
 @media (max-width: 760px) {
   .page-title { font-size: 1.45rem; }
   .content-inner { max-width: none; }
   .card, .status-card { padding: 1rem 1.1rem; }
 
-  /* stack issue rows: title gets its own line, meta trails beneath.
-     no hover on touch — the chevron affordance is desktop-only */
-  .issue-row { flex-wrap: wrap; row-gap: 0.35rem; padding: 0.75rem 0.65rem; }
-  .issue-row .title { order: -1; flex: 1 1 100%; }
-  .issue-row .chevron { display: none; }
-  .issue-row .when { margin-left: auto; }
+  /* one line stays one line: tags yield their space, the timestamp holds */
+  .issue-row { min-height: 44px; }
+  .issue-row .row-meta .tag-list { display: none; }
 }

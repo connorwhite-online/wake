@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { api, type SearchResult } from '../api';
-import { StateBadge } from '../components/bits';
+import { StateDot, TypeIcon } from '../components/bits';
 
 export default function Search() {
   const [params, setParams] = useSearchParams();
@@ -64,15 +64,20 @@ export default function Search() {
             <p className="empty">nothing found</p>
           ) : (
             results.map((r) => (
-              <div className="issue-row" key={r.id}>
-                <StateBadge state={r.state} />
-                <div className="title" style={{ flex: 1, minWidth: 0 }}>
-                  <Link to={r.url}>{r.title}</Link>{' '}
-                  <span className="tag">{r.type}</span>
+              <Link to={r.url} className="result-row" key={r.id}>
+                {r.state ? (
+                  <StateDot state={r.state} />
+                ) : (
+                  <span className="state-dot" style={{ color: 'var(--ink-faint)' }} title={r.type}>
+                    <TypeIcon type={r.type} />
+                  </span>
+                )}
+                <div className="result-body">
+                  <div className="result-title">{r.title}</div>
                   {/* server-escaped: raw workspace text is HTML-escaped before <b> markers are added */}
                   <div className="snippet" dangerouslySetInnerHTML={{ __html: r.snippet_html }} />
                 </div>
-              </div>
+              </Link>
             ))
           )}
         </>

@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { relTime, eventSummary, type ActivityRow, type NodeSummary } from '../api';
+import { relTime, compactTime, eventSummary, type ActivityRow, type NodeSummary } from '../api';
 import { useStateStyle } from '../meta';
 
 export function Prose({ html }: { html: string }) {
@@ -98,6 +98,22 @@ export function StateBadge({ state }: { state: string | null }) {
   );
 }
 
+/** The glyph alone, state-colored — for dense lists where the group header carries the name. */
+export function StateDot({ state }: { state: string | null }) {
+  const style = useStateStyle(state);
+  if (!state || !style) return null;
+  return (
+    <span
+      className="state-dot"
+      title={style.label}
+      aria-label={style.label}
+      style={{ ['--sh' as string]: style.hue, ['--sc' as string]: style.chroma }}
+    >
+      <StateIcon state={state} />
+    </span>
+  );
+}
+
 export function TagList({ tags }: { tags: string[] }) {
   if (!tags.length) return null;
   return (
@@ -111,8 +127,8 @@ export function TagList({ tags }: { tags: string[] }) {
   );
 }
 
-/* Type glyphs shared by NodeChip (mirrors the wiki-link mask glyphs). */
-function TypeIcon({ type }: { type: string }) {
+/* Type glyphs shared by NodeChip and search results (mirrors the wiki-link masks). */
+export function TypeIcon({ type }: { type: string }) {
   const common = {
     viewBox: '0 0 24 24',
     fill: 'none',
@@ -166,13 +182,18 @@ const Chevron = (
   </svg>
 );
 
+/** One issue, one line: glyph, title, then meta trailing right (Linear's list). */
 export function IssueRow({ issue }: { issue: NodeSummary & { url: string } }) {
   return (
     <Link to={issue.url} className={`issue-row${issue.state === 'dropped' ? ' dropped' : ''}`}>
-      <StateBadge state={issue.state} />
+      <StateDot state={issue.state} />
       <span className="title">{issue.title}</span>
-      <TagList tags={issue.tags} />
-      <span className="when">{relTime(issue.updated)}</span>
+      <span className="row-meta">
+        <TagList tags={issue.tags} />
+        <span className="when" title={relTime(issue.updated)}>
+          {compactTime(issue.updated)}
+        </span>
+      </span>
       {Chevron}
     </Link>
   );
