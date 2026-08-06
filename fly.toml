@@ -1,0 +1,28 @@
+# fly.io config for a writable wake deployment.
+#   fly launch --no-deploy        # creates the app from this file
+#   fly volumes create wake_data --size 1
+#   fly secrets set WAKE_TOKEN=$(openssl rand -hex 24)
+#   fly deploy
+app = "wake-workspace"
+primary_region = "sjc"
+
+[build]
+
+[env]
+  WAKE_SPACE = "/data/workspace"
+  WAKE_GIT_SYNC = "1"
+
+[mounts]
+  source = "wake_data"
+  destination = "/data"
+
+[http_service]
+  internal_port = 8722
+  force_https = true
+  auto_stop_machines = "off"    # the watcher + git sync want to stay up
+  auto_start_machines = true
+  min_machines_running = 1
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"

@@ -1,4 +1,5 @@
 import { Route, Routes } from 'react-router-dom';
+import Gate from './components/Gate';
 import Layout from './components/Layout';
 import Home from './routes/Home';
 import Projects from './routes/Projects';
@@ -9,6 +10,14 @@ import Doc from './routes/Doc';
 import Search from './routes/Search';
 
 export default function App() {
+  return (
+    <Gate>
+      <AppRoutes />
+    </Gate>
+  );
+}
+
+function AppRoutes() {
   return (
     <Routes>
       <Route element={<Layout />}>

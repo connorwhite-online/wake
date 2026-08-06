@@ -61,8 +61,29 @@ export interface NodePayload {
 
 export type SearchResult = NodeSummary & { snippet: string; snippet_html: string; score: number };
 
+const TOKEN_KEY = 'wake:token';
+
+export function getToken(): string | null {
+  return localStorage.getItem(TOKEN_KEY);
+}
+
+export function setToken(token: string): void {
+  localStorage.setItem(TOKEN_KEY, token);
+}
+
+/** Artifact links are browser-native navigations that can't carry a header. */
+export function withToken(url: string): string {
+  const t = getToken();
+  return t ? `${url}${url.includes('?') ? '&' : '?'}token=${encodeURIComponent(t)}` : url;
+}
+
 async function get<T>(path: string): Promise<T> {
-  const res = await fetch(path);
+  const token = getToken();
+  const res = await fetch(path, token ? { headers: { Authorization: `Bearer ${token}` } } : undefined);
+  if (res.status === 401) {
+    window.dispatchEvent(new Event('wake:unauthorized'));
+    throw new Error('unauthorized');
+  }
   if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
   return res.json() as Promise<T>;
 }

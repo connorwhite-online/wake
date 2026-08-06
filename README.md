@@ -82,6 +82,40 @@ activity/log.ndjson                   # workspace-level events
 .wake/index.db                        # disposable SQLite index (gitignored)
 ```
 
+## Deploy to the cloud (writable — agents everywhere)
+
+`wake serve` now exposes the MCP server over **streamable HTTP at `/mcp`** in
+the same process as the UI and API, so a single deployed instance is both the
+write surface for agents anywhere and the reading surface for you.
+
+Deploy the included `Dockerfile` on anything with a persistent disk —
+`fly.toml` is ready for Fly.io:
+
+```bash
+fly launch --no-deploy
+fly volumes create wake_data --size 1
+fly secrets set WAKE_TOKEN=$(openssl rand -hex 24)   # required before exposing
+fly deploy
+```
+
+Then connect agents from anywhere:
+
+```bash
+# Claude Code, any machine
+claude mcp add --transport http wake https://<your-app>.fly.dev/mcp \
+  --header "Authorization: Bearer <token>"
+```
+
+The same URL works as a **custom connector in the Claude apps**, which puts
+wake's tools in Claude on your phone. The UI at the root prompts once for the
+token and remembers it.
+
+Env knobs: `WAKE_TOKEN` (bearer auth for `/mcp` and `/api` — without it,
+anyone who reaches the port can read and write), `WAKE_GIT_SYNC=1`
+(debounced auto-commit of the workspace so git history stays the record),
+`WAKE_GIT_PUSH=1` (also push — add a remote with credentials to the volume's
+workspace first), `WAKE_HOST`/`PORT`.
+
 ## Deploy to Vercel (read-only)
 
 The repo deploys as a **read-only mirror** of `workspace/`: the UI is static,
