@@ -1,0 +1,85 @@
+import { useEffect, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { api, type SearchResult } from '../api';
+import { StateBadge } from '../components/bits';
+
+function highlight(snippet: string): string {
+  return snippet.replaceAll('「', '<b>').replaceAll('」', '</b>');
+}
+
+export default function Search() {
+  const [params, setParams] = useSearchParams();
+  const q = params.get('q') ?? '';
+  const [results, setResults] = useState<SearchResult[] | null>(null);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    document.title = 'wake · search';
+  }, []);
+
+  useEffect(() => {
+    if (!q) {
+      setResults(null);
+      return;
+    }
+    api
+      .search(q)
+      .then((r) => setResults(r.results))
+      .catch((e) => setError(String(e.message ?? e)));
+  }, [q]);
+
+  return (
+    <div>
+      <h1 className="page-title">search</h1>
+      <input
+        className="search-input"
+        defaultValue={q}
+        placeholder="search the wake…"
+        style={{
+          width: '100%',
+          fontSize: '1.1rem',
+          padding: '0.6rem 0.8rem',
+          fontFamily: 'var(--sans)',
+          color: 'var(--ink)',
+          background: 'var(--paper-raised)',
+          border: '1px solid var(--rule)',
+          borderRadius: '8px',
+          outline: 'none',
+          marginBottom: '1.4rem',
+        }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            const value = e.currentTarget.value.trim();
+            if (value) setParams({ q: value });
+          }
+        }}
+      />
+
+      {error && <p className="empty">search failed — {error}</p>}
+
+      {!q && !error && <p className="empty">type a query and press enter</p>}
+
+      {q && results && (
+        <>
+          <p className="page-meta">
+            {results.length} results for '{q}'
+          </p>
+          {results.length === 0 ? (
+            <p className="empty">nothing found</p>
+          ) : (
+            results.map((r) => (
+              <div className="issue-row" key={r.id}>
+                <StateBadge state={r.state} />
+                <div className="title" style={{ flex: 1, minWidth: 0 }}>
+                  <Link to={r.url}>{r.title}</Link>{' '}
+                  <span className="tag">{r.type}</span>
+                  <div className="snippet" dangerouslySetInnerHTML={{ __html: highlight(r.snippet) }} />
+                </div>
+              </div>
+            ))
+          )}
+        </>
+      )}
+    </div>
+  );
+}

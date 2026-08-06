@@ -56,6 +56,15 @@ function readStatus(ws: Workspace, project: NodeSummary): StatusInfo | null {
   };
 }
 
+/** Drop a leading <h1> that just repeats the page title — the UI already renders it. */
+function stripDuplicateH1(html: string, title: string): string {
+  const m = html.match(/^\s*<h1>(.*?)<\/h1>/);
+  if (m && m[1].replace(/<[^>]+>/g, '').trim().toLowerCase() === title.trim().toLowerCase()) {
+    return html.slice(m.index! + m[0].length);
+  }
+  return html;
+}
+
 function nodePayload(ws: Workspace, id: string) {
   const row = ws.requireRow(id);
   const summary = rowToSummary(row);
@@ -66,7 +75,7 @@ function nodePayload(ws: Workspace, id: string) {
     summary.project_id != null ? (ws.summary(summary.project_id) ?? null) : null;
   return {
     node: withUrl(summary),
-    body_html: renderMarkdown(ws, node.body),
+    body_html: stripDuplicateH1(renderMarkdown(ws, node.body), summary.title),
     project: project ? { id: project.id, title: project.title, slug: project.slug } : null,
     artifact:
       node.fm.type === 'artifact'
@@ -79,7 +88,11 @@ function nodePayload(ws: Workspace, id: string) {
       })
       .filter(Boolean),
     backlinks: ws.backlinks(id).map((b) => ({ ...withUrl(b.node), kind: b.kind })),
-    activity: activityWithUrls(ws, ws.activityFor(id, 100) as ReturnType<Workspace['recentActivity']>),
+    activity: activityWithUrls(
+      ws,
+      // per-node activity rows carry no join info — they are all about this node
+      ws.activityFor(id, 100).map((a) => ({ ...a, node_title: summary.title, node_type: summary.type })),
+    ),
   };
 }
 
@@ -119,7 +132,7 @@ export function buildApi(ws: Workspace, bus: EventEmitter): Hono {
     ).slice(0, 100);
     const status = readStatus(ws, project);
     return c.json({
-      project: { ...withUrl(project), body_html: renderMarkdown(ws, node.body) },
+      project: { ...withUrl(project), body_html: stripDuplicateH1(renderMarkdown(ws, node.body), project.title) },
       status: status ? { generated: status.generated, generated_by: status.generated_by, html: status.full_html } : null,
       issues: grouped,
       timeline,
