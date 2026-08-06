@@ -9,7 +9,7 @@ primary_region = "sjc"
 [build]
 
 [env]
-  WAKE_SPACE = "/data/workspace"
+  WAKE_HOME = "/data"
   WAKE_GIT_SYNC = "1"
 
 [mounts]

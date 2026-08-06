@@ -57,12 +57,14 @@ export class Workspace {
   private constructor(
     readonly root: string,
     readonly db: Database.Database,
+    /** slug of the space this workspace holds — used for URLs and labelling */
+    readonly slug: string,
   ) {}
 
-  /** Open the workspace + index; rebuild or catch the index up as needed. */
-  static open(root: string): Workspace {
-    const { db, needsReindex } = openDb(dbPath(root));
-    const ws = new Workspace(root, db);
+  /** Open the space's content + index; rebuild or catch the index up as needed. */
+  static open(root: string, slug?: string): Workspace {
+    const { db, needsReindex } = openDb(dbPath(root, slug));
+    const ws = new Workspace(root, db, slug ?? path.basename(root));
     if (needsReindex) fullReindex(root, db);
     else catchUp(root, db);
     return ws;

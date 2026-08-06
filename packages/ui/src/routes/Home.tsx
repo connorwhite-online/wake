@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { api, takeLastVisit, relTime, type HomePayload } from '../api';
 import { Empty, Prose, Timeline } from '../components/bits';
 
 export default function Home() {
+  const { space = '' } = useParams<{ space: string }>();
   const [data, setData] = useState<HomePayload | null>(null);
   const [error, setError] = useState('');
   const sinceRef = useRef<string | null>(null);
@@ -16,11 +17,12 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
+    if (!space) return;
     api
-      .home()
+      .home(space)
       .then(setData)
       .catch((e) => setError(String(e.message ?? e)));
-  }, []);
+  }, [space]);
 
   if (error) return <p className="empty">could not load home — {error}</p>;
   if (!data) return <p className="empty">loading…</p>;
@@ -46,7 +48,7 @@ export default function Home() {
           ) : (
             data.statuses.map((s) => (
               <div className="status-card" key={s.project_id}>
-                <Link to={`/p/${s.slug}`} className="page-title" style={{ fontSize: '1.1rem', display: 'block' }}>
+                <Link to={`/s/${space}/p/${s.slug}`} className="page-title" style={{ fontSize: '1.1rem', display: 'block' }}>
                   {s.title}
                 </Link>
                 <div className="status-meta">

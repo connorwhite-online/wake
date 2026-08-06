@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState } from 'react';
+import { api, type MePayload, type SpaceSummary, type UserProfile } from './api';
 
 export interface StateStyle {
   label: string;
@@ -8,8 +9,8 @@ export interface StateStyle {
 
 export type StateMap = Record<string, StateStyle>;
 
-/* Mirrors the server defaults — used until /api/meta answers (and as the
-   fallback for unknown state keys). */
+/* Mirrors the server defaults — used until /api/s/<space>/meta answers (and as
+   the fallback for unknown state keys). */
 export const DEFAULT_STATES: StateMap = {
   triage: { label: 'triage', hue: 80, chroma: 0.01 },
   todo: { label: 'todo', hue: 250, chroma: 0.05 },
@@ -19,22 +20,47 @@ export const DEFAULT_STATES: StateMap = {
   dropped: { label: 'dropped', hue: 80, chroma: 0.005 },
 };
 
-const MetaContext = createContext<StateMap>(DEFAULT_STATES);
+const StateContext = createContext<StateMap>(DEFAULT_STATES);
 
-export function MetaProvider({ children }: { children: React.ReactNode }) {
+/** Per-space state vocabulary (labels + colors from that space's wake.json). */
+export function MetaProvider({ space, children }: { space: string; children: React.ReactNode }) {
   const [states, setStates] = useState<StateMap>(DEFAULT_STATES);
   useEffect(() => {
-    const token = localStorage.getItem('wake:token');
-    fetch('/api/meta', token ? { headers: { Authorization: `Bearer ${token}` } } : undefined)
-      .then((r) => (r.ok ? r.json() : null))
+    setStates(DEFAULT_STATES);
+    api
+      .meta(space)
       .then((m) => m?.states && setStates({ ...DEFAULT_STATES, ...m.states }))
       .catch(() => {});
-  }, []);
-  return <MetaContext.Provider value={states}>{children}</MetaContext.Provider>;
+  }, [space]);
+  return <StateContext.Provider value={states}>{children}</StateContext.Provider>;
 }
 
 export function useStateStyle(state: string | null): StateStyle | null {
-  const states = useContext(MetaContext);
+  const states = useContext(StateContext);
   if (!state) return null;
   return states[state] ?? { label: state, hue: 80, chroma: 0.01 };
+}
+
+interface Account {
+  user: UserProfile | null;
+  spaces: SpaceSummary[];
+  loading: boolean;
+}
+
+const AccountContext = createContext<Account>({ user: null, spaces: [], loading: true });
+
+/** Who you are and which spaces you can reach — loaded once for the session. */
+export function AccountProvider({ children }: { children: React.ReactNode }) {
+  const [account, setAccount] = useState<Account>({ user: null, spaces: [], loading: true });
+  useEffect(() => {
+    api
+      .me()
+      .then((me: MePayload) => setAccount({ user: me.user, spaces: me.spaces, loading: false }))
+      .catch(() => setAccount({ user: null, spaces: [], loading: false }));
+  }, []);
+  return <AccountContext.Provider value={account}>{children}</AccountContext.Provider>;
+}
+
+export function useAccount(): Account {
+  return useContext(AccountContext);
 }

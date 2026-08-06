@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { api, type SearchResult } from '../api';
 import { StateDot, TypeIcon } from '../components/bits';
 
 export default function Search() {
+  const { space = '' } = useParams<{ space: string }>();
   const [params, setParams] = useSearchParams();
   const q = params.get('q') ?? '';
   const [results, setResults] = useState<SearchResult[] | null>(null);
@@ -14,15 +15,15 @@ export default function Search() {
   }, []);
 
   useEffect(() => {
-    if (!q) {
+    if (!space || !q) {
       setResults(null);
       return;
     }
     api
-      .search(q)
+      .search(space, q)
       .then((r) => setResults(r.results))
       .catch((e) => setError(String(e.message ?? e)));
-  }, [q]);
+  }, [space, q]);
 
   return (
     <div>

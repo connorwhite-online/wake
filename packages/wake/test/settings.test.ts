@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { Workspace } from '../src/core/workspace.js';
+import { Hub } from '../src/core/spaces.js';
 import { buildHttpApp } from '../src/http/server.js';
 import { loadSettings, DEFAULT_STATES } from '../src/core/settings.js';
 
@@ -39,16 +39,17 @@ describe('workspace settings (wake.json)', () => {
     expect((states as Record<string, unknown>).bogus).toBeUndefined();
   });
 
-  it('serves settings at /api/meta, live-reloading edits', async () => {
+  it('serves settings per space, live-reloading edits', async () => {
     const root = tmpWs();
-    const ws = Workspace.open(root);
-    const app = buildHttpApp(ws, {});
-    const before = await app.request('/api/meta').then((r) => r.json());
+    const hub = Hub.single(root);
+    const slug = hub.spaces()[0].slug;
+    const app = buildHttpApp(hub, {});
+    const before = await app.request(`/api/s/${slug}/meta`).then((r) => r.json());
     expect(before.states.done.label).toBe('done');
 
     fs.writeFileSync(path.join(root, 'wake.json'), JSON.stringify({ states: { done: { label: 'shipped' } } }));
-    const after = await app.request('/api/meta').then((r) => r.json());
+    const after = await app.request(`/api/s/${slug}/meta`).then((r) => r.json());
     expect(after.states.done.label).toBe('shipped');
-    ws.close();
+    hub.closeAll();
   });
 });

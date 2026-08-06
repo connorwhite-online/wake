@@ -4,20 +4,20 @@ import { api, relTime, type NodePayload } from '../api';
 import { NodeChip, Prose, TagList, SectionLabel } from '../components/bits';
 
 export default function Doc() {
-  const params = useParams();
+  const { space = '', ...params } = useParams<{ space: string; '*': string }>();
   const path = params['*'] ?? '';
   const [data, setData] = useState<NodePayload | null>(null);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (!path) return;
+    if (!space || !path) return;
     setData(null);
     setError('');
     api
-      .doc(path)
+      .doc(space, path)
       .then(setData)
       .catch((e) => setError(String(e.message ?? e)));
-  }, [path]);
+  }, [space, path]);
 
   useEffect(() => {
     if (data) document.title = `wake · ${data.node.title}`;

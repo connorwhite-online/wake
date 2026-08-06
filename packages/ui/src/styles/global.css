@@ -20,9 +20,10 @@
   --accent-soft: oklch(0.945 0.025 230);
   --broken: oklch(0.58 0.14 25);
 
-  /* actor orb gradient endpoints (hue rotated per actor via --orb-h) */
-  --orb-a: oklch(0.89 0.1 var(--orb-h, 55));
-  --orb-b: oklch(0.69 0.17 calc(var(--orb-h, 55) - 22));
+  /* orb gradient stops — scalars only. A composed color here would bake in
+     :root's --orb-h, since nested var() resolves where it is declared. */
+  --orb-l1: 0.89; --orb-c1: 0.1;
+  --orb-l2: 0.69; --orb-c2: 0.17;
 
   --shadow-card: 0 2px 4px oklch(0.2 0.02 60 / 0.06), 0 12px 32px -8px oklch(0.2 0.02 60 / 0.13);
   --shadow-lift: 0 3px 6px oklch(0.2 0.02 60 / 0.07), 0 18px 44px -10px oklch(0.2 0.02 60 / 0.18);
@@ -56,8 +57,8 @@
     --accent: oklch(0.75 0.09 230);
     --accent-soft: oklch(0.32 0.04 230);
     --broken: oklch(0.7 0.12 25);
-    --orb-a: oklch(0.77 0.1 var(--orb-h, 55));
-    --orb-b: oklch(0.57 0.15 calc(var(--orb-h, 55) - 22));
+    --orb-l1: 0.77; --orb-c1: 0.1;
+    --orb-l2: 0.57; --orb-c2: 0.15;
     --shadow-card: 0 1px 2px oklch(0 0 0 / 0.25), 0 10px 30px -8px oklch(0 0 0 / 0.4);
     --shadow-lift: 0 2px 4px oklch(0 0 0 / 0.3), 0 16px 40px -10px oklch(0 0 0 / 0.5);
     --shadow-bar: 0 -1px 2px oklch(0 0 0 / 0.25), 0 -10px 30px -12px oklch(0 0 0 / 0.45);
@@ -153,11 +154,77 @@ a:hover { text-decoration: underline; text-underline-offset: 3px; }
   width: 21px; height: 21px; border-radius: 50%;
   background:
     radial-gradient(circle at 30% 25%, oklch(1 0 0 / 0.65) 0%, transparent 32%),
-    radial-gradient(circle at 32% 28%, var(--orb-a), var(--orb-b));
+    radial-gradient(
+      circle at 32% 28%,
+      oklch(var(--orb-l1) var(--orb-c1) var(--orb-h, 55)),
+      oklch(var(--orb-l2) var(--orb-c2) calc(var(--orb-h, 55) - 22)));
   --orb-h: 230;
   transition: transform 0.3s var(--spring);
 }
 .wordmark:hover::before { transform: scale(1.12) rotate(8deg); }
+
+/* space switcher — your profile and the boundary you're inside */
+.switcher { position: relative; min-width: 0; }
+.switcher-trigger {
+  display: flex; align-items: center; gap: 0.55rem;
+  width: 100%; padding: 0.45rem 0.5rem; margin: -0.45rem -0.5rem;
+  background: none; border: 0; border-radius: 13px;
+  color: var(--ink); font: inherit; text-align: left; cursor: pointer;
+  transition: background 0.15s var(--ease-out), transform 0.12s var(--ease-out);
+}
+.switcher-trigger:active { transform: scale(0.97); }
+@media (hover: hover) {
+  .switcher-trigger:hover { background: var(--accent-soft); }
+}
+.switcher-labels { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.switcher-space {
+  font-weight: 650; font-size: 0.98rem; line-height: 1.25;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.switcher-user { font-size: 0.74rem; color: var(--ink-faint); }
+.switcher-trigger > svg { width: 15px; height: 15px; color: var(--ink-faint); flex-shrink: 0; }
+
+.switcher-menu {
+  position: absolute; top: calc(100% + 0.55rem); left: 0;
+  /* stay inside the sidebar's scroll container; the topbar widens it below */
+  width: 100%; z-index: 40;
+  background: var(--card); border-radius: var(--r-lg);
+  box-shadow: var(--shadow-lift); padding: 0.45rem;
+  animation: pop-in 0.18s var(--spring) both;
+  transform-origin: top left;
+}
+.switcher-heading {
+  font-size: 0.66rem; font-weight: 600; letter-spacing: 0.13em; text-transform: uppercase;
+  color: var(--ink-faint); padding: 0.35rem 0.6rem 0.45rem;
+}
+.switcher-item {
+  display: flex; align-items: center; gap: 0.55rem;
+  width: 100%; padding: 0.5rem 0.6rem;
+  background: none; border: 0; border-radius: 13px;
+  color: var(--ink); font: inherit; text-align: left; cursor: pointer;
+  transition: background 0.14s var(--ease-out), transform 0.12s var(--ease-out);
+}
+.switcher-item:active { transform: scale(0.98); }
+.switcher-item.active { background: var(--accent-soft); }
+@media (hover: hover) {
+  .switcher-item:hover { background: var(--accent-soft); }
+}
+.switcher-item-body { display: flex; flex-direction: column; min-width: 0; }
+.switcher-item-name { font-weight: 600; font-size: 0.9rem; }
+.switcher-item-meta { font-size: 0.73rem; color: var(--ink-faint); }
+.switcher-empty { padding: 0.6rem; color: var(--ink-faint); font-size: 0.85rem; }
+.switcher-foot {
+  font-size: 0.72rem; color: var(--ink-faint);
+  padding: 0.55rem 0.6rem 0.35rem; margin-top: 0.35rem;
+  border-top: 1px solid var(--rule);
+}
+.switcher-foot code { font-family: var(--mono); font-size: 0.95em; }
+
+.space-chip {
+  font-size: 0.7rem; font-weight: 600; letter-spacing: 0.02em;
+  color: var(--ink-soft); background: var(--accent-soft);
+  border-radius: 999px; padding: 0.1rem 0.5rem;
+}
 
 .nav-section { display: flex; flex-direction: column; gap: 0.1rem; }
 
@@ -214,7 +281,6 @@ a:hover { text-decoration: underline; text-underline-offset: 3px; }
   .topbar {
     display: flex;
     align-items: center;
-    justify-content: space-between;
     padding: 0.7rem 1.1rem;
     position: sticky;
     top: 0;
@@ -223,6 +289,9 @@ a:hover { text-decoration: underline; text-underline-offset: 3px; }
     -webkit-backdrop-filter: blur(14px);
     backdrop-filter: blur(14px);
   }
+
+  .topbar .switcher { flex: 1 1 auto; }
+  .topbar .switcher-menu { width: auto; min-width: min(20rem, calc(100vw - 2.2rem)); }
 
   .content { padding: 0.9rem 1.1rem calc(4.8rem + env(safe-area-inset-bottom)); }
 
@@ -417,7 +486,10 @@ a.card:active, .card-link:active { transform: scale(0.98); }
   width: 18px; height: 18px; border-radius: 50%; flex-shrink: 0;
   background:
     radial-gradient(circle at 30% 25%, oklch(1 0 0 / 0.6) 0%, transparent 34%),
-    radial-gradient(circle at 32% 28%, var(--orb-a), var(--orb-b));
+    radial-gradient(
+      circle at 32% 28%,
+      oklch(var(--orb-l1) var(--orb-c1) var(--orb-h, 55)),
+      oklch(var(--orb-l2) var(--orb-c2) calc(var(--orb-h, 55) - 22)));
   transition: transform 0.3s var(--spring);
 }
 li:hover > .orb, .card-link:hover .orb { transform: scale(1.15); }

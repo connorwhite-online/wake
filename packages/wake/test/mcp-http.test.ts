@@ -6,19 +6,21 @@ import { serve } from '@hono/node-server';
 import type { ServerType } from '@hono/node-server';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
-import { Workspace } from '../src/core/workspace.js';
+import { Hub } from '../src/core/spaces.js';
 import { buildHttpApp } from '../src/http/server.js';
 
 const TOKEN = 'test-secret';
-let ws: Workspace;
+let hub: Hub;
+let slug: string;
 let server: ServerType;
 let base: string;
 
 beforeAll(async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'wake-http-'));
   for (const d of ['projects', 'docs', 'artifacts', 'activity']) fs.mkdirSync(path.join(root, d));
-  ws = Workspace.open(root);
-  const app = buildHttpApp(ws, { token: TOKEN });
+  hub = Hub.single(root);
+  slug = hub.spaces()[0].slug;
+  const app = buildHttpApp(hub, { token: TOKEN });
   await new Promise<void>((resolve) => {
     server = serve({ fetch: app.fetch, port: 0 }, (info) => {
       base = `http://localhost:${info.port}`;
@@ -29,7 +31,7 @@ beforeAll(async () => {
 
 afterAll(() => {
   server.close();
-  ws.close();
+  hub.closeAll();
 });
 
 describe('wake over streamable http', () => {
@@ -40,7 +42,7 @@ describe('wake over streamable http', () => {
       body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'initialize', params: {} }),
     });
     expect(mcpRes.status).toBe(401);
-    const apiRes = await fetch(`${base}/api/home`);
+    const apiRes = await fetch(`${base}/api/s/${slug}/home`);
     expect(apiRes.status).toBe(401);
   });
 
@@ -67,7 +69,9 @@ describe('wake over streamable http', () => {
     expect(issue.id).toBeTruthy();
 
     // the reading API sees the write immediately (same process, write-through index)
-    const home = await fetch(`${base}/api/home`, { headers: { Authorization: `Bearer ${TOKEN}` } }).then((r) => r.json());
+    const home = await fetch(`${base}/api/s/${slug}/home`, { headers: { Authorization: `Bearer ${TOKEN}` } }).then((r) =>
+      r.json(),
+    );
     expect(home.projects.some((p: { id: string }) => p.id === project.id)).toBe(true);
     const search = await fetch(`${base}/api/search?q=internet`, {
       headers: { Authorization: `Bearer ${TOKEN}` },
@@ -78,7 +82,7 @@ describe('wake over streamable http', () => {
   });
 
   it('accepts the token as a query param for browser-native fetches', async () => {
-    const res = await fetch(`${base}/api/home?token=${TOKEN}`);
+    const res = await fetch(`${base}/api/s/${slug}/home?token=${TOKEN}`);
     expect(res.status).toBe(200);
   });
 });

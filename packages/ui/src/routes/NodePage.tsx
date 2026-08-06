@@ -4,19 +4,19 @@ import { api, relTime, withToken, type NodePayload } from '../api';
 import { NodeChip, Prose, StateBadge, TagList, SectionLabel, Timeline } from '../components/bits';
 
 export default function NodePage() {
-  const { id } = useParams<{ id: string }>();
+  const { space = '', id } = useParams<{ space: string; id: string }>();
   const [data, setData] = useState<NodePayload | null>(null);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (!id) return;
+    if (!space || !id) return;
     setData(null);
     setError('');
     api
-      .node(id)
+      .node(space, id)
       .then(setData)
       .catch((e) => setError(String(e.message ?? e)));
-  }, [id]);
+  }, [space, id]);
 
   useEffect(() => {
     if (data) document.title = `wake · ${data.node.title}`;
@@ -32,7 +32,7 @@ export default function NodePage() {
       <h1 className="page-title">{node.title}</h1>
       <div className="page-meta">
         <StateBadge state={node.state} />
-        {project && <Link to={`/p/${project.slug}`}>in {project.title}</Link>}
+        {project && <Link to={`/s/${space}/p/${project.slug}`}>in {project.title}</Link>}
         {node.author && <span>{node.author}</span>}
         <span>created {relTime(node.created)}</span>
         <span>updated {relTime(node.updated)}</span>

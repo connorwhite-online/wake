@@ -7,10 +7,12 @@ export interface NodeSummary {
   state: string | null;
   project_id: string | null;
   author: string | null;
+  archived: boolean;
   created: string;
   updated: string;
   tags: string[];
   url: string;
+  space: string;
 }
 
 export interface ActivityRow {
@@ -34,6 +36,26 @@ export interface StatusSummary {
 }
 
 export type ProjectSummary = NodeSummary & { counts: Record<string, number>; last_active: string | null };
+
+export interface SpaceSummary {
+  slug: string;
+  name: string;
+  description: string;
+  url: string;
+  projects: number;
+  issues: number;
+  last_active: string | null;
+}
+
+export interface UserProfile {
+  name: string;
+  handle: string;
+}
+
+export interface MePayload {
+  user: UserProfile;
+  spaces: SpaceSummary[];
+}
 
 export interface HomePayload {
   projects: ProjectSummary[];
@@ -59,9 +81,15 @@ export interface NodePayload {
   activity: ActivityRow[];
 }
 
-export type SearchResult = NodeSummary & { snippet: string; snippet_html: string; score: number };
+export type SearchResult = NodeSummary & {
+  snippet: string;
+  snippet_html: string;
+  score: number;
+  space_name?: string;
+};
 
 const TOKEN_KEY = 'wake:token';
+const LAST_SPACE_KEY = 'wake:last-space';
 
 export function getToken(): string | null {
   return localStorage.getItem(TOKEN_KEY);
@@ -69,6 +97,14 @@ export function getToken(): string | null {
 
 export function setToken(token: string): void {
   localStorage.setItem(TOKEN_KEY, token);
+}
+
+export function rememberSpace(slug: string): void {
+  localStorage.setItem(LAST_SPACE_KEY, slug);
+}
+
+export function lastSpace(): string | null {
+  return localStorage.getItem(LAST_SPACE_KEY);
 }
 
 /** Artifact links are browser-native navigations that can't carry a header. */
@@ -88,15 +124,22 @@ async function get<T>(path: string): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+const inSpace = (space: string, path: string) => `/api/s/${encodeURIComponent(space)}${path}`;
+
 export const api = {
-  home: () => get<HomePayload>('/api/home'),
-  projects: () => get<{ projects: ProjectSummary[] }>('/api/projects'),
-  project: (slug: string) => get<ProjectPayload>(`/api/projects/${encodeURIComponent(slug)}`),
-  node: (id: string) => get<NodePayload>(`/api/nodes/${encodeURIComponent(id)}`),
-  docs: () => get<{ docs: NodeSummary[] }>('/api/docs'),
-  doc: (path: string) => get<NodePayload>(`/api/docs/${path}`),
-  search: (q: string, type?: string) =>
-    get<{ results: SearchResult[] }>(`/api/search?q=${encodeURIComponent(q)}${type ? `&type=${type}` : ''}`),
+  me: () => get<MePayload>('/api/me'),
+  meta: (space: string) => get<{ states: Record<string, { label: string; hue: number; chroma: number }> }>(
+    inSpace(space, '/meta'),
+  ),
+  home: (space: string) => get<HomePayload>(inSpace(space, '/home')),
+  projects: (space: string) => get<{ projects: ProjectSummary[] }>(inSpace(space, '/projects')),
+  project: (space: string, slug: string) => get<ProjectPayload>(inSpace(space, `/projects/${encodeURIComponent(slug)}`)),
+  node: (space: string, id: string) => get<NodePayload>(inSpace(space, `/nodes/${encodeURIComponent(id)}`)),
+  docs: (space: string) => get<{ docs: NodeSummary[] }>(inSpace(space, '/docs')),
+  doc: (space: string, path: string) => get<NodePayload>(inSpace(space, `/docs/${path}`)),
+  search: (space: string, q: string, type?: string) =>
+    get<{ results: SearchResult[] }>(inSpace(space, `/search?q=${encodeURIComponent(q)}${type ? `&type=${type}` : ''}`)),
+  searchEverywhere: (q: string) => get<{ results: SearchResult[] }>(`/api/search?q=${encodeURIComponent(q)}`),
 };
 
 const LAST_VISIT_KEY = 'wake:last-visit';
@@ -148,6 +191,10 @@ export function eventSummary(a: ActivityRow): string {
       return `appended to § ${p.section}`;
     case 'status_regenerated':
       return 'regenerated status';
+    case 'archived':
+      return `archived${p.reason ? ` — ${p.reason}` : ''}`;
+    case 'unarchived':
+      return `restored${p.reason ? ` — ${p.reason}` : ''}`;
     case 'field_updated': {
       const fields = a.payload.fields;
       return `updated ${Array.isArray(fields) ? fields.join(', ') : 'fields'}`;
