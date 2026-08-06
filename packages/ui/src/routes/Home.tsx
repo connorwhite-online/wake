@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api, takeLastVisit, relTime, type HomePayload } from '../api';
-import { Prose, Timeline } from '../components/bits';
+import { Empty, Prose, Timeline } from '../components/bits';
 
 export default function Home() {
   const [data, setData] = useState<HomePayload | null>(null);
@@ -34,10 +34,10 @@ export default function Home() {
       )}
 
       {data.projects.length === 0 ? (
-        <div className="empty">
-          nothing here yet. run <code>wake seed</code> to load a project, or connect an agent over MCP to
-          start writing.
-        </div>
+        <Empty>
+          still water — nothing here yet. run <code>wake seed</code> for a sample project, or connect an
+          agent over MCP and let it start writing.
+        </Empty>
       ) : (
         <>
           <h2 className="section-label">status</h2>

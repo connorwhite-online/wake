@@ -1,9 +1,15 @@
 import { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { api, relTime, type ProjectPayload } from '../api';
-import { Prose, TagList, SectionLabel, IssueRow, Timeline } from '../components/bits';
+import { Empty, NodeChip, Prose, TagList, SectionLabel, IssueRow, Timeline } from '../components/bits';
+import { useStateStyle } from '../meta';
 
 const STATE_ORDER = ['in-progress', 'blocked', 'triage', 'todo', 'done', 'dropped'];
+
+function StateLabel({ state }: { state: string }) {
+  const style = useStateStyle(state);
+  return <>{style?.label ?? state}</>;
+}
 
 export default function Project() {
   const { slug } = useParams<{ slug: string }>();
@@ -50,7 +56,9 @@ export default function Project() {
           <Prose html={status.html} />
         </div>
       ) : (
-        <p className="empty">no status has been generated yet — an agent runs regenerate_status to create one</p>
+        <Empty>
+          no status yet — an agent runs <code>regenerate_status</code> to write one
+        </Empty>
       )}
 
       {STATE_ORDER.map((state) => {
@@ -58,7 +66,9 @@ export default function Project() {
         if (!rows || rows.length === 0) return null;
         return (
           <div key={state}>
-            <SectionLabel count={rows.length}>{state}</SectionLabel>
+            <SectionLabel count={rows.length}>
+              <StateLabel state={state} />
+            </SectionLabel>
             {rows.map((issue) => (
               <IssueRow key={issue.id} issue={issue} />
             ))}
@@ -70,11 +80,11 @@ export default function Project() {
       {docs.length === 0 ? (
         <p className="empty">no resources linked yet</p>
       ) : (
-        docs.map((doc) => (
-          <div key={doc.id}>
-            <Link to={doc.url}>{doc.title}</Link>
-          </div>
-        ))
+        <div>
+          {docs.map((doc) => (
+            <NodeChip key={doc.id} node={doc} />
+          ))}
+        </div>
       )}
 
       <h2 className="section-label">timeline</h2>

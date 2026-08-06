@@ -40,7 +40,7 @@ function wikiLinks(resolve: (target: string) => NodeSummary | undefined) {
           parts.push({
             type: 'link',
             url: nodeUrl(resolved),
-            data: { hProperties: { className: ['wiki-link'] } },
+            data: { hProperties: { className: ['wiki-link'], dataNodeType: resolved.type } },
             children: [{ type: 'text', value: label }],
           });
         } else {
@@ -70,6 +70,7 @@ const schema: typeof defaultSchema = {
     a: [
       ...(defaultSchema.attributes?.a ?? []).filter((x) => !(Array.isArray(x) && x[0] === 'className')),
       'className',
+      'dataNodeType',
     ] as never,
     span: ['className'] as never,
   },

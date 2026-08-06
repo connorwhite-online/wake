@@ -24,54 +24,55 @@ export function Orb({ name, size = 18 }: { name: string; size?: number }) {
   );
 }
 
-/* Chunky per-state glyphs — 2.6 stroke, one clear shape each. */
+/* State icons — Linear's circle language: one family, meaning at a glance. */
 function StateIcon({ state }: { state: string }) {
   const common = {
     viewBox: '0 0 24 24',
     fill: 'none',
     stroke: 'currentColor',
-    strokeWidth: 2.6,
+    strokeWidth: 2.2,
     strokeLinecap: 'round' as const,
     strokeLinejoin: 'round' as const,
   };
   switch (state) {
-    case 'triage': // funnel
+    case 'triage': // dashed circle: exists, not yet real
       return (
         <svg {...common}>
-          <path d="M4 5h16l-6 7v5l-4 2v-7L4 5z" />
+          <circle cx="12" cy="12" r="8" strokeDasharray="3.2 3.4" />
         </svg>
       );
-    case 'todo': // open circle
+    case 'todo': // open circle: ready
       return (
         <svg {...common}>
           <circle cx="12" cy="12" r="8" />
         </svg>
       );
-    case 'in-progress': // half-filled circle
+    case 'in-progress': // pie half-fill: underway
       return (
         <svg {...common}>
           <circle cx="12" cy="12" r="8" />
-          <path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor" stroke="none" />
+          <path d="M12 7.5a4.5 4.5 0 0 1 0 9z" fill="currentColor" stroke="none" />
         </svg>
       );
-    case 'blocked': // stop octagon
-      return (
-        <svg {...common}>
-          <path d="M8.5 4h7l4.5 4.5v7L15.5 20h-7L4 15.5v-7L8.5 4z" />
-        </svg>
-      );
-    case 'done': // check circle
+    case 'blocked': // filled bar across: stopped
       return (
         <svg {...common}>
           <circle cx="12" cy="12" r="8" />
-          <path d="M8.5 12.5l2.5 2.5 4.5-5" />
+          <path d="M8.5 12h7" strokeWidth="2.6" />
         </svg>
       );
-    case 'dropped': // slash circle
+    case 'done': // filled circle, knocked-out check
       return (
         <svg {...common}>
-          <circle cx="12" cy="12" r="8" />
-          <path d="M7.5 16.5l9-9" />
+          <circle cx="12" cy="12" r="9" fill="currentColor" stroke="none" />
+          <path d="M8.4 12.4l2.4 2.4 4.6-4.9" stroke="var(--card)" strokeWidth="2.4" />
+        </svg>
+      );
+    case 'dropped': // dashed circle with slash: let go
+      return (
+        <svg {...common}>
+          <circle cx="12" cy="12" r="8" strokeDasharray="3.2 3.4" />
+          <path d="M8.5 15.5l7-7" />
         </svg>
       );
     default:
@@ -110,25 +111,79 @@ export function TagList({ tags }: { tags: string[] }) {
   );
 }
 
-export function IssueRow({ issue }: { issue: NodeSummary }) {
+/* Type glyphs shared by NodeChip (mirrors the wiki-link mask glyphs). */
+function TypeIcon({ type }: { type: string }) {
+  const common = {
+    viewBox: '0 0 24 24',
+    fill: 'none',
+    stroke: 'currentColor',
+    strokeWidth: 2.4,
+    strokeLinecap: 'round' as const,
+    strokeLinejoin: 'round' as const,
+  };
+  switch (type) {
+    case 'project':
+      return (
+        <svg {...common}>
+          <path d="M3 7.5a2 2 0 0 1 2-2h4l2 2.5h8a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-9.5z" />
+        </svg>
+      );
+    case 'issue':
+      return (
+        <svg {...common}>
+          <circle cx="12" cy="12" r="8" />
+        </svg>
+      );
+    case 'artifact':
+      return (
+        <svg {...common}>
+          <path d="M8 12.5l6.5-6.5a3 3 0 0 1 4.5 4.5l-8 8a5 5 0 0 1-7-7l7.5-7.5" />
+        </svg>
+      );
+    default: // doc / resource
+      return (
+        <svg {...common}>
+          <path d="M7 3.5h7l4.5 4.5v10.5a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-13a2 2 0 0 1 2-2zM13.5 3.5V9H19" />
+        </svg>
+      );
+  }
+}
+
+/** A node as a tactile object: icon + title (+ optional relationship kind). */
+export function NodeChip({ node, kind }: { node: NodeSummary & { url: string }; kind?: string }) {
   return (
-    <div className={`issue-row${issue.state === 'dropped' ? ' dropped' : ''}`}>
+    <Link to={node.url} className="node-chip">
+      <TypeIcon type={node.type} />
+      <span className="chip-title">{node.title}</span>
+      {kind && <span className="chip-kind">{kind}</span>}
+    </Link>
+  );
+}
+
+const Chevron = (
+  <svg className="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M9 5.5l6.5 6.5L9 18.5" />
+  </svg>
+);
+
+export function IssueRow({ issue }: { issue: NodeSummary & { url: string } }) {
+  return (
+    <Link to={issue.url} className={`issue-row${issue.state === 'dropped' ? ' dropped' : ''}`}>
       <StateBadge state={issue.state} />
-      <Link to={issue.url} className="title">
-        {issue.title}
-      </Link>
+      <span className="title">{issue.title}</span>
       <TagList tags={issue.tags} />
       <span className="when">{relTime(issue.updated)}</span>
-    </div>
+      {Chevron}
+    </Link>
   );
 }
 
 export function Timeline({ rows, since }: { rows: ActivityRow[]; since?: string | null }) {
-  if (!rows.length) return <p className="empty">no activity yet — the water is still</p>;
+  if (!rows.length) return <Empty>no activity yet — the water is still</Empty>;
   return (
     <ul className="timeline">
       {rows.map((a, i) => (
-        <li key={`${a.node_id}-${a.ts}-${i}`}>
+        <li key={`${a.node_id}-${a.ts}-${i}`} style={{ ['--i' as string]: Math.min(i, 10) }}>
           <Orb name={a.actor} />
           <span className="what">
             {since && a.ts > since && <span className="new-marker" title="since your last visit" />}
@@ -143,6 +198,16 @@ export function Timeline({ rows, since }: { rows: ActivityRow[]; since?: string 
         </li>
       ))}
     </ul>
+  );
+}
+
+/** Friendly empty state: an orb in a soft dashed panel. */
+export function Empty({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="empty-panel">
+      <Orb name="wake" size={30} />
+      <span>{children}</span>
+    </div>
   );
 }
 
