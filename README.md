@@ -98,17 +98,23 @@ fly secrets set WAKE_TOKEN=$(openssl rand -hex 24)   # required before exposing
 fly deploy
 ```
 
-Then connect agents from anywhere:
+(No CLI on hand? Railway builds the `Dockerfile` straight from the GitHub
+repo in the browser: connect repo → attach a volume at `/data` → set
+`WAKE_TOKEN` → deploy.)
 
-```bash
-# Claude Code, any machine
-claude mcp add --transport http wake https://<your-app>.fly.dev/mcp \
-  --header "Authorization: Bearer <token>"
-```
+Then wake is a URL, and **any agent anywhere** writes to it:
 
-The same URL works as a **custom connector in the Claude apps**, which puts
-wake's tools in Claude on your phone. The UI at the root prompts once for the
-token and remembers it.
+- **Cloud coding agents** — drop this repo's `.mcp.json` into any project
+  (it references `WAKE_URL` + `WAKE_TOKEN` from the environment, so no
+  secrets are committed). Every Claude Code session spun up on that repo —
+  web, mobile, desktop, CI — gets the wake tools automatically. Nothing about
+  wake assumes a desktop.
+- **Claude apps** — add the `/mcp` URL once as a custom connector and wake's
+  tools are available in chats on your phone.
+- **One-off** — `claude mcp add --transport http wake https://<app>/mcp
+  --header "Authorization: Bearer <token>"`, or any MCP-capable runtime.
+
+The UI at the root prompts once for the token and remembers it.
 
 Env knobs: `WAKE_TOKEN` (bearer auth for `/mcp` and `/api` — without it,
 anyone who reaches the port can read and write), `WAKE_GIT_SYNC=1`
