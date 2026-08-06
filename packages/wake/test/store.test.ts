@@ -29,6 +29,7 @@ const issueFm: IssueFrontmatter = {
   tags: ['test'],
   links: [{ to: '01J4XX9C2D4E6F8G0H1J2K3L4M', type: 'relates-to' }],
   space: 'home',
+  archived: false,
 };
 
 describe('store', () => {

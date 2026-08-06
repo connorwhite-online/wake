@@ -64,6 +64,7 @@ function eventSummary(kind: string, payload: Record<string, unknown>): string {
 export function computeRollup(ws: Workspace, projectId: string, today = new Date().toISOString().slice(0, 10)): Rollup {
   const project = ws.requireRow(projectId);
   if (project.type !== 'project') throw new Error(`${projectId} is not a project`);
+  // archived issues are out of the wake — list() excludes them by default
   const issues = ws.list({ type: 'issue', project_id: projectId, limit: 500 });
 
   const lastActivity = new Map<string, string>();

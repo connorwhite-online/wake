@@ -431,6 +431,7 @@ export function runSeed(root: string, opts: { force?: boolean } = {}): {
     tags: ['meta'],
     links: [],
     space: 'home',
+    archived: false,
     type: 'project',
   };
   saveNode(root, P.projectPath(PROJECT_SLUG), projectFm, PROJECT_BODY);
@@ -454,6 +455,7 @@ export function runSeed(root: string, opts: { force?: boolean } = {}): {
       tags: [],
       links,
       space: 'home',
+      archived: false,
       type: 'issue',
       state: seed.state,
       project: projectId,
@@ -479,6 +481,7 @@ export function runSeed(root: string, opts: { force?: boolean } = {}): {
       tags: doc.tags,
       links: [{ to: projectId, type: 'documents' }],
       space: 'home',
+      archived: false,
       type: 'doc',
     };
     saveNode(root, P.docPath(doc.relPath), fm, doc.body);
@@ -521,6 +524,7 @@ export function runSeed(root: string, opts: { force?: boolean } = {}): {
     tags: ['benchmark', 'indexing'],
     links: [{ to: artifactIssueId, type: 'produced-by' }],
     space: 'home',
+    archived: false,
     type: 'artifact',
     file: `${hash}.csv`,
     mime: 'text/csv',

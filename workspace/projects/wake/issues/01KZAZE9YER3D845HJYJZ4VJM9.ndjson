@@ -1,0 +1,4 @@
+{"ts":"2026-08-06T07:26:12.432Z","actor":"claude-code","node":"01KZAZE9YER3D845HJYJZ4VJM9","kind":"created","payload":{"type":"issue","title":"No delete/archive path over MCP","state":"triage"}}
+{"ts":"2026-08-06T07:26:12.435Z","actor":"claude-code","node":"01KZAZE9YER3D845HJYJZ4VJM9","kind":"state_changed","payload":{"from":"triage","to":"in-progress","reason":"fixing as part of the friction-log sweep"}}
+{"ts":"2026-08-06T07:26:12.437Z","actor":"claude-code","node":"01KZAZE9YER3D845HJYJZ4VJM9","kind":"state_changed","payload":{"from":"in-progress","to":"done","reason":"archive_node shipped: archived flag in frontmatter, schema v2 index column, excluded from list/search/rollups by default, update_node patches to it rejected"}}
+{"ts":"2026-08-06T07:26:12.474Z","actor":"claude-code","node":"01KZAZE9YER3D845HJYJZ4VJM9","kind":"linked","payload":{"from":"01KZAZE9ZN1EK3ZZTNE71B6XGK","type":"documents","direction":"in"}}

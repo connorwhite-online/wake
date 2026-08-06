@@ -51,11 +51,12 @@ export function registerTools(server: McpServer, ws: Workspace): void {
         type: z.enum(NODE_TYPES).optional().describe('restrict to one node type'),
         tags: z.array(z.string()).optional().describe('require at least one of these tags'),
         limit: z.number().int().min(1).max(100).optional(),
+        include_archived: z.boolean().optional().describe('include archived nodes (excluded by default)'),
       },
     },
-    wrap(({ query, type, tags, limit }) => {
+    wrap(({ query, type, tags, limit, include_archived }) => {
       fresh();
-      return json({ results: ws.search({ query, type, tags, limit }) });
+      return json({ results: ws.search({ query, type, tags, limit, include_archived }) });
     }),
   );
 
@@ -82,7 +83,8 @@ export function registerTools(server: McpServer, ws: Workspace): void {
   server.registerTool(
     'list',
     {
-      description: 'List node summaries (no bodies) filtered by type, project, state, tags, or recency.',
+      description:
+        'List node summaries (no bodies) filtered by type, project, state, tags, or recency. Projects include last_active — the most recent activity timestamp across the project and its issues (a project\'s own `updated` does not move when child issues change).',
       inputSchema: {
         type: z.enum(NODE_TYPES).optional(),
         project_id: z.string().optional(),
@@ -91,25 +93,35 @@ export function registerTools(server: McpServer, ws: Workspace): void {
         updated_since: z.string().optional().describe('ISO timestamp'),
         limit: z.number().int().min(1).max(500).optional(),
         order: z.enum(['updated', 'created']).optional(),
+        include_archived: z.boolean().optional().describe('include archived nodes (excluded by default)'),
       },
     },
     wrap((opts) => {
       fresh();
-      return json({ nodes: ws.list(opts) });
+      const nodes = ws.list(opts).map((n) =>
+        n.type === 'project' ? { ...n, last_active: ws.projectLastActive(n.id) } : n,
+      );
+      return json({ nodes });
     }),
   );
 
   server.registerTool(
     'create_node',
     {
-      description:
-        'Create a project, issue, doc, or artifact. Issues require project_id and start in state "triage". Docs take an optional doc_path under docs/. Artifacts take text content + ext + mime.',
+      description: [
+        'Create a node. Per-type fields:',
+        '- project: title + optional body (charter). Gets a slug-derived path.',
+        '- issue: requires project_id; body is the description. Starts in `state` (default "triage" — pass state to start elsewhere, e.g. "todo" or "in-progress" if work is already underway).',
+        '- doc: body is the content; doc_path places it under docs/ (defaults to a slug of the title).',
+        '- artifact: content (text) + ext + mime describe the immutable blob; body is the human-readable caption shown alongside it.',
+      ].join('\n'),
       inputSchema: {
         type: z.enum(NODE_TYPES),
         title: z.string(),
-        body: z.string().optional().describe('markdown body'),
+        body: z.string().optional().describe('markdown body (issues: description; artifacts: caption)'),
         tags: z.array(z.string()).optional(),
         project_id: z.string().optional().describe('required for issues'),
+        state: z.enum(ISSUE_STATES).optional().describe('issues only: initial state, default triage'),
         doc_path: z.string().optional().describe('docs only: path under docs/, extension optional'),
         content: z.string().optional().describe('artifacts only: text content of the blob'),
         ext: z.string().optional().describe('artifacts only: blob file extension, e.g. "csv"'),
@@ -137,7 +149,7 @@ export function registerTools(server: McpServer, ws: Workspace): void {
   server.registerTool(
     'set_issue_state',
     {
-      description: `Transition an issue's state (${ISSUE_STATES.join(' | ')}). The only legal way to change state; appends a state_changed event with your reason.`,
+      description: `Transition an issue's state (${ISSUE_STATES.join(' | ')}). The only legal way to change state; appends a state_changed event with your reason. Any transition between distinct states is allowed by design — the states are a vocabulary, not an enforced workflow; your reason string is the audit trail.`,
       inputSchema: {
         id: z.string(),
         state: z.enum(ISSUE_STATES),
@@ -184,15 +196,21 @@ export function registerTools(server: McpServer, ws: Workspace): void {
     'write_doc',
     {
       description:
-        'Create or fully replace a doc at a path under docs/. Preserves the node id and created date when overwriting. Refuses paths outside docs/.',
+        'Create or FULLY REPLACE a doc at a path under docs/ — the previous body is discarded, so prefer append_doc for incremental additions. Preserves the node id and created date when overwriting. When replacing a doc you read earlier, pass expect_updated (its `updated` timestamp from get_node) so a concurrent change fails loudly instead of being silently clobbered. Refuses paths outside docs/.',
       inputSchema: {
         path: z.string().describe('path under docs/, e.g. "architecture/indexing" (extension optional)'),
         content: z.string().describe('full markdown body'),
         title: z.string().optional(),
+        expect_updated: z
+          .string()
+          .optional()
+          .describe("the doc's current `updated` timestamp — write fails if it changed since"),
         actor,
       },
     },
-    wrap(({ path: docPath, content, title, actor: who }) => json(ws.writeDoc(docPath, content, title, who))),
+    wrap(({ path: docPath, content, title, expect_updated, actor: who }) =>
+      json(ws.writeDoc(docPath, content, title, who, expect_updated)),
+    ),
   );
 
   server.registerTool(
@@ -210,6 +228,21 @@ export function registerTools(server: McpServer, ws: Workspace): void {
       ws.addLink(a, b, type, who);
       return json({ ok: true });
     }),
+  );
+
+  server.registerTool(
+    'archive_node',
+    {
+      description:
+        'Archive (or unarchive) a node — soft, reversible removal. Archived nodes stay on disk with full history but disappear from list, search, and status rollups. Use this to clean up exploratory or superseded nodes; nothing in wake is ever hard-deleted over MCP.',
+      inputSchema: {
+        id: z.string(),
+        archived: z.boolean().optional().describe('default true; pass false to restore'),
+        reason: z.string().describe('why — lands in the activity log'),
+        actor,
+      },
+    },
+    wrap(({ id, archived, reason, actor: who }) => json(ws.setArchived(id, archived ?? true, reason, who))),
   );
 
   server.registerTool(
@@ -242,7 +275,9 @@ export function registerTools(server: McpServer, ws: Workspace): void {
           stale: true,
           rollup,
           rollup_hash: currentHash,
-          message: 'The rollup changed since that hash was issued. Re-check your prose against this fresh rollup and retry with the new hash (or pass force: true).',
+          message: hash
+            ? 'The rollup changed since that hash was issued. Re-check your prose against this fresh rollup and retry with the new hash (or pass force: true only if you have already reviewed it).'
+            : 'Missing rollup_hash — this is a two-call tool. Review the rollup above, then retry with your prose AND this rollup_hash.',
         });
       }
       const result = writeStatus(ws, project_id, prose, who ?? 'agent');

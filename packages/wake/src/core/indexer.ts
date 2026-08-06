@@ -37,12 +37,12 @@ function upsertNode(db: Database.Database, node: Node, relPath: string): void {
   if (byPath && byPath.id !== fm.id) db.prepare(`DELETE FROM nodes WHERE path = ?`).run(relPath);
 
   db.prepare(
-    `INSERT INTO nodes (id, type, title, path, slug, space, state, project_id, author, created, updated, tags, extra, body)
-     VALUES (@id, @type, @title, @path, @slug, @space, @state, @project_id, @author, @created, @updated, @tags, @extra, @body)
+    `INSERT INTO nodes (id, type, title, path, slug, space, state, project_id, author, archived, created, updated, tags, extra, body)
+     VALUES (@id, @type, @title, @path, @slug, @space, @state, @project_id, @author, @archived, @created, @updated, @tags, @extra, @body)
      ON CONFLICT(id) DO UPDATE SET
        type=excluded.type, title=excluded.title, path=excluded.path, slug=excluded.slug,
        space=excluded.space, state=excluded.state, project_id=excluded.project_id,
-       author=excluded.author, created=excluded.created, updated=excluded.updated,
+       author=excluded.author, archived=excluded.archived, created=excluded.created, updated=excluded.updated,
        tags=excluded.tags, extra=excluded.extra, body=excluded.body`,
   ).run({
     id: fm.id,
@@ -54,6 +54,7 @@ function upsertNode(db: Database.Database, node: Node, relPath: string): void {
     state,
     project_id: projectId,
     author: fm.author,
+    archived: fm.archived ? 1 : 0,
     created: fm.created,
     updated: fm.updated,
     tags: JSON.stringify(fm.tags),

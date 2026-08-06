@@ -33,7 +33,7 @@ export interface StatusSummary {
   summary_html: string;
 }
 
-export type ProjectSummary = NodeSummary & { counts: Record<string, number> };
+export type ProjectSummary = NodeSummary & { counts: Record<string, number>; last_active: string | null };
 
 export interface HomePayload {
   projects: ProjectSummary[];
@@ -59,7 +59,7 @@ export interface NodePayload {
   activity: ActivityRow[];
 }
 
-export type SearchResult = NodeSummary & { snippet: string; score: number };
+export type SearchResult = NodeSummary & { snippet: string; snippet_html: string; score: number };
 
 async function get<T>(path: string): Promise<T> {
   const res = await fetch(path);

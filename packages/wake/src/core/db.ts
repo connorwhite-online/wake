@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import Database from 'better-sqlite3';
 
-export const SCHEMA_VERSION = '1';
+export const SCHEMA_VERSION = '2';
 
 const DDL = `
 CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT);
@@ -17,6 +17,7 @@ CREATE TABLE nodes (
   state      TEXT,
   project_id TEXT,
   author     TEXT,
+  archived   INTEGER NOT NULL DEFAULT 0,
   created    TEXT NOT NULL,
   updated    TEXT NOT NULL,
   tags       TEXT NOT NULL DEFAULT '[]',

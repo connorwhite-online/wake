@@ -41,6 +41,8 @@ export interface CreateInput {
   tags?: string[];
   /** issues: id of the parent project */
   project_id?: string;
+  /** issues: initial state (defaults to triage) */
+  state?: IssueState;
   /** docs: path under docs/ (extension optional) */
   doc_path?: string;
   /** artifacts: text content of the blob */
@@ -109,6 +111,7 @@ export class Workspace {
     updated_since?: string;
     limit?: number;
     order?: 'updated' | 'created';
+    include_archived?: boolean;
   }): NodeSummary[] {
     const limit = Math.min(opts.limit ?? 100, 500);
     const order = opts.order === 'created' ? 'created' : 'updated';
@@ -119,6 +122,7 @@ export class Workspace {
            AND (@project_id IS NULL OR project_id = @project_id)
            AND (@state IS NULL OR state = @state)
            AND (@updated_since IS NULL OR updated >= @updated_since)
+           AND (@include_archived = 1 OR archived = 0)
          ORDER BY ${order} DESC
          LIMIT @limit`,
       )
@@ -127,6 +131,7 @@ export class Workspace {
         project_id: opts.project_id ?? null,
         state: opts.state ?? null,
         updated_since: opts.updated_since ?? null,
+        include_archived: opts.include_archived ? 1 : 0,
         limit,
       }) as Record<string, unknown>[];
     let results = rows.map(rowToSummary);
@@ -137,8 +142,26 @@ export class Workspace {
     return results;
   }
 
-  search(opts: { query: string; type?: string; tags?: string[]; limit?: number }): SearchResult[] {
+  search(opts: {
+    query: string;
+    type?: string;
+    tags?: string[];
+    limit?: number;
+    include_archived?: boolean;
+  }): SearchResult[] {
     return searchNodes(this.db, opts);
+  }
+
+  /** Most recent activity timestamp across a project and its issues — the "is this alive" signal. */
+  projectLastActive(projectId: string): string | null {
+    const row = this.db
+      .prepare(
+        `SELECT MAX(ts) t FROM activity
+         WHERE node_id = @id
+            OR node_id IN (SELECT id FROM nodes WHERE type = 'issue' AND project_id = @id)`,
+      )
+      .get({ id: projectId }) as { t: string | null };
+    return row.t;
   }
 
   activityFor(nodeId: string, limit = 50): ActivityRow[] {
@@ -239,6 +262,7 @@ export class Workspace {
       tags: input.tags ?? [],
       links: [],
       space: 'home',
+      archived: false,
     };
     let relPath: string;
     let fm: Node['fm'];
@@ -257,8 +281,10 @@ export class Workspace {
         if (!input.project_id) throw new Error('issues require project_id');
         const projectRow = this.requireRow(input.project_id);
         if (projectRow.type !== 'project') throw new Error(`${input.project_id} is not a project`);
+        const state = input.state ?? 'triage';
+        if (!ISSUE_STATES.includes(state)) throw new Error(`invalid initial state '${state}'`);
         relPath = P.issuePath(projectRow.slug as string, id);
-        fm = { ...base, type: 'issue', state: 'triage', project: input.project_id };
+        fm = { ...base, type: 'issue', state, project: input.project_id };
         break;
       }
       case 'doc': {
@@ -292,7 +318,9 @@ export class Workspace {
     saveNode(this.root, relPath, fm, input.body ?? '');
     indexFile(this.root, this.db, relPath);
     const row = this.requireRow(id);
-    this.logEvent(row, 'created', { type: input.type, title: input.title }, actor);
+    const payload: Record<string, unknown> = { type: input.type, title: input.title };
+    if (input.type === 'issue') payload.state = (fm as { state: string }).state;
+    this.logEvent(row, 'created', payload, actor);
     return { id, path: relPath };
   }
 
@@ -316,6 +344,7 @@ export class Workspace {
     const node = this.loadById(id);
     if (node.fm.type !== 'issue') throw new Error(`${id} is not an issue`);
     const from = node.fm.state;
+    if (from === state) throw new Error(`issue is already '${state}' — no transition to record`);
     node.fm.state = state;
     node.fm.updated = nowIso();
     saveNode(this.root, node.path, node.fm, node.body);
@@ -332,6 +361,21 @@ export class Workspace {
   logRawEvent(nodeId: string, kind: EventKind, payload: Record<string, unknown>, actor = 'agent'): ActivityEvent {
     const row = this.requireRow(nodeId);
     return this.logEvent(row, kind, payload, actor);
+  }
+
+  /** Soft, reversible removal. Archived nodes stay on disk but leave lists, search, and rollups. */
+  setArchived(id: string, archived: boolean, reason: string, actor = 'agent'): { id: string; archived: boolean } {
+    const row = this.requireRow(id);
+    const node = this.loadById(id);
+    if (node.fm.archived === archived) {
+      throw new Error(`node is already ${archived ? 'archived' : 'active'}`);
+    }
+    node.fm.archived = archived;
+    node.fm.updated = nowIso();
+    saveNode(this.root, node.path, node.fm, node.body);
+    indexFile(this.root, this.db, node.path);
+    this.logEvent(row, archived ? 'archived' : 'unarchived', { reason }, actor);
+    return { id, archived };
   }
 
   appendDoc(id: string, section: string, content: string, actor = 'agent'): void {
@@ -362,11 +406,23 @@ export class Workspace {
     this.logEvent(row, 'doc_appended', { section }, actor);
   }
 
-  writeDoc(docRelPath: string, content: string, title?: string, actor = 'agent'): { id: string; path: string } {
+  writeDoc(
+    docRelPath: string,
+    content: string,
+    title?: string,
+    actor = 'agent',
+    expectUpdated?: string,
+  ): { id: string; path: string } {
     const rel = P.docPath(docRelPath);
     const absPath = path.join(this.root, rel);
     if (fs.existsSync(absPath)) {
       const existing = loadNode(this.root, rel);
+      if (expectUpdated && existing.fm.updated !== expectUpdated) {
+        throw new Error(
+          `doc changed since you read it (updated ${existing.fm.updated}, you expected ${expectUpdated}) — ` +
+            `re-read it with get_node and merge before replacing, or use append_doc`,
+        );
+      }
       existing.fm.updated = nowIso();
       if (title) existing.fm.title = title;
       saveNode(this.root, rel, existing.fm, content);

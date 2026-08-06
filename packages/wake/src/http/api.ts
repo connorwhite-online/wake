@@ -99,8 +99,14 @@ function nodePayload(ws: Workspace, id: string) {
 export function buildApi(ws: Workspace, bus: EventEmitter): Hono {
   const app = new Hono();
 
+  const projectList = () =>
+    ws
+      .list({ type: 'project' })
+      .map((p) => ({ ...withUrl(p), counts: issueCounts(ws, p.id), last_active: ws.projectLastActive(p.id) }))
+      .sort((a, b) => (b.last_active ?? b.updated).localeCompare(a.last_active ?? a.updated));
+
   app.get('/api/home', (c) => {
-    const projects = ws.list({ type: 'project' }).map((p) => ({ ...withUrl(p), counts: issueCounts(ws, p.id) }));
+    const projects = projectList();
     const statuses = ws
       .list({ type: 'project' })
       .map((p) => readStatus(ws, p))
@@ -114,8 +120,7 @@ export function buildApi(ws: Workspace, bus: EventEmitter): Hono {
   });
 
   app.get('/api/projects', (c) => {
-    const projects = ws.list({ type: 'project' }).map((p) => ({ ...withUrl(p), counts: issueCounts(ws, p.id) }));
-    return c.json({ projects });
+    return c.json({ projects: projectList() });
   });
 
   app.get('/api/projects/:slug', (c) => {
