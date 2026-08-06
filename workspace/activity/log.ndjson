@@ -1,0 +1,3 @@
+{"ts":"2026-08-06T07:26:12.470Z","actor":"claude-code","node":"01KZAZE9ZN1EK3ZZTNE71B6XGK","kind":"created","payload":{"type":"doc","title":"ADR 002: Archive, not delete"}}
+{"ts":"2026-08-06T07:26:12.472Z","actor":"claude-code","node":"01KZAZE9ZN1EK3ZZTNE71B6XGK","kind":"linked","payload":{"to":"01KZAZE9Y5AGJNDAC3KPSNKGPE","type":"documents","direction":"out"}}
+{"ts":"2026-08-06T07:26:12.474Z","actor":"claude-code","node":"01KZAZE9ZN1EK3ZZTNE71B6XGK","kind":"linked","payload":{"to":"01KZAZE9YER3D845HJYJZ4VJM9","type":"documents","direction":"out"}}

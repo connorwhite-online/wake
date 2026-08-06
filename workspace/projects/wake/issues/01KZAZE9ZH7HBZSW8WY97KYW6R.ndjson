@@ -1,0 +1,2 @@
+{"ts":"2026-08-06T07:26:12.466Z","actor":"claude-code","node":"01KZAZE9ZH7HBZSW8WY97KYW6R","kind":"created","payload":{"type":"issue","title":"Threads: conversation attached to nodes (Phase 3)","state":"triage"}}
+{"ts":"2026-08-06T07:26:12.467Z","actor":"claude-code","node":"01KZAZE9ZH7HBZSW8WY97KYW6R","kind":"state_changed","payload":{"from":"triage","to":"todo","reason":"roadmap item, sequenced after the friction sweep"}}

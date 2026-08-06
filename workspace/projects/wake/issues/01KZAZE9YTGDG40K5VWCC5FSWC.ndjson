@@ -1,0 +1,3 @@
+{"ts":"2026-08-06T07:26:12.444Z","actor":"claude-code","node":"01KZAZE9YTGDG40K5VWCC5FSWC","kind":"created","payload":{"type":"issue","title":"create_node per-type shapes were invisible in the schema","state":"triage"}}
+{"ts":"2026-08-06T07:26:12.447Z","actor":"claude-code","node":"01KZAZE9YTGDG40K5VWCC5FSWC","kind":"state_changed","payload":{"from":"triage","to":"in-progress","reason":"fixing as part of the friction-log sweep"}}
+{"ts":"2026-08-06T07:26:12.449Z","actor":"claude-code","node":"01KZAZE9YTGDG40K5VWCC5FSWC","kind":"state_changed","payload":{"from":"in-progress","to":"done","reason":"per-type description, initial state param, caption documented"}}

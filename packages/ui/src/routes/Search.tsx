@@ -3,10 +3,6 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { api, type SearchResult } from '../api';
 import { StateBadge } from '../components/bits';
 
-function highlight(snippet: string): string {
-  return snippet.replaceAll('「', '<b>').replaceAll('」', '</b>');
-}
-
 export default function Search() {
   const [params, setParams] = useSearchParams();
   const q = params.get('q') ?? '';
@@ -73,7 +69,8 @@ export default function Search() {
                 <div className="title" style={{ flex: 1, minWidth: 0 }}>
                   <Link to={r.url}>{r.title}</Link>{' '}
                   <span className="tag">{r.type}</span>
-                  <div className="snippet" dangerouslySetInnerHTML={{ __html: highlight(r.snippet) }} />
+                  {/* server-escaped: raw workspace text is HTML-escaped before <b> markers are added */}
+                  <div className="snippet" dangerouslySetInnerHTML={{ __html: r.snippet_html }} />
                 </div>
               </div>
             ))

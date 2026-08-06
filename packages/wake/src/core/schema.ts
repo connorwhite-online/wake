@@ -19,6 +19,8 @@ export const EVENT_KINDS = [
   'doc_appended',
   'status_regenerated',
   'field_updated',
+  'archived',
+  'unarchived',
 ] as const;
 export type EventKind = (typeof EVENT_KINDS)[number];
 
@@ -44,6 +46,9 @@ const baseFrontmatter = z.object({
   links: z.array(linkSchema).default([]),
   // Space indirection for future multiplayer; omitted means 'home'.
   space: z.string().default('home'),
+  // Soft, reversible removal — archived nodes vanish from lists, search, and
+  // rollups but stay on disk ("remove" and "delete" are different verbs).
+  archived: z.boolean().default(false),
 });
 
 export const projectFrontmatter = baseFrontmatter.extend({
@@ -107,4 +112,5 @@ export const PROTECTED_FIELDS: Record<string, string> = {
   project: "'project' is structural — file a new issue instead",
   links: "'links' are managed — use the link tool",
   file: 'artifact blobs are immutable',
+  archived: "'archived' is managed — use archive_node",
 };

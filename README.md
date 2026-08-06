@@ -64,6 +64,10 @@ packages/wake   # everything server-side: core data layer, SQLite/FTS5 indexer,
                 # MCP server (stdio), HTTP API + static UI serving, CLI, seed
 packages/ui     # the reading UI (React + Vite): Home ("the wake"), project,
                 # issue, docs, search
+workspace/      # wake's own live workspace — the project tracking itself.
+                # Its first issues are the friction log a cold agent filed
+                # after exploring the MCP server blind. Read it:
+                #   wake serve --space ./workspace
 ```
 
 A workspace (data repo) looks like:

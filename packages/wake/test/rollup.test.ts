@@ -47,6 +47,7 @@ describe('rollup', () => {
       tags: [],
       links: [],
       space: 'home',
+      archived: false,
     }, '');
     appendActivity(root, issueActivityPath('rollup-p', staleId), {
       ts: created,
