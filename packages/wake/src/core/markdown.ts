@@ -10,19 +10,20 @@ import type { Workspace } from './workspace.js';
 import { WIKI_LINK_RE } from './indexer.js';
 import type { NodeSummary } from './search.js';
 
-/** Route for a node in the reading UI. */
-export function nodeUrl(node: NodeSummary): string {
+/** Route for a node in the reading UI, scoped to its space. */
+export function nodeUrl(node: NodeSummary, space?: string): string {
+  const prefix = space ? `/s/${space}` : '';
   switch (node.type) {
     case 'project':
-      return `/p/${node.slug}`;
+      return `${prefix}/p/${node.slug}`;
     case 'doc':
-      return `/docs/${node.path.replace(/^docs\//, '').replace(/\.md$/, '')}`;
+      return `${prefix}/docs/${node.path.replace(/^docs\//, '').replace(/\.md$/, '')}`;
     default:
-      return `/i/${node.id}`;
+      return `${prefix}/i/${node.id}`;
   }
 }
 
-function wikiLinks(resolve: (target: string) => NodeSummary | undefined) {
+function wikiLinks(resolve: (target: string) => NodeSummary | undefined, space?: string) {
   return () => (tree: Root) => {
     visit(tree, 'text', (node: Text, index, parent) => {
       if (index === undefined || !parent) return;
@@ -39,7 +40,7 @@ function wikiLinks(resolve: (target: string) => NodeSummary | undefined) {
         if (resolved) {
           parts.push({
             type: 'link',
-            url: nodeUrl(resolved),
+            url: nodeUrl(resolved, space),
             data: { hProperties: { className: ['wiki-link'], dataNodeType: resolved.type } },
             children: [{ type: 'text', value: label }],
           });
@@ -81,7 +82,7 @@ export function renderMarkdown(ws: Workspace, markdown: string): string {
   const processor = unified()
     .use(remarkParse)
     .use(remarkGfm)
-    .use(wikiLinks((t) => ws.resolveWikiTarget(t)))
+    .use(wikiLinks((t) => ws.resolveWikiTarget(t), ws.slug))
     .use(remarkRehype)
     .use(rehypeSanitize, schema)
     .use(rehypeStringify);

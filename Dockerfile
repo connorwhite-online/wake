@@ -15,7 +15,7 @@ COPY . .
 RUN npm run build
 
 ENV NODE_ENV=production \
-    WAKE_SPACE=/data/workspace \
+    WAKE_HOME=/data \
     WAKE_HOST=0.0.0.0 \
     PORT=8722
 

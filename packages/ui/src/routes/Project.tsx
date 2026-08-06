@@ -12,19 +12,19 @@ function StateLabel({ state }: { state: string }) {
 }
 
 export default function Project() {
-  const { slug } = useParams<{ slug: string }>();
+  const { space = '', slug } = useParams<{ space: string; slug: string }>();
   const [data, setData] = useState<ProjectPayload | null>(null);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (!slug) return;
+    if (!space || !slug) return;
     setData(null);
     setError('');
     api
-      .project(slug)
+      .project(space, slug)
       .then(setData)
       .catch((e) => setError(String(e.message ?? e)));
-  }, [slug]);
+  }, [space, slug]);
 
   useEffect(() => {
     if (data) document.title = `wake · ${data.project.title}`;

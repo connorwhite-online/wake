@@ -1,18 +1,19 @@
 import { randomUUID } from 'node:crypto';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
-import type { Workspace } from '../core/workspace.js';
+import type { Hub } from '../core/spaces.js';
 import { buildMcpServer } from '../mcp/server.js';
 
 /**
  * Streamable HTTP MCP endpoint state. One McpServer + transport per client
- * session, all sharing the single Workspace (better-sqlite3 is synchronous,
- * so concurrent sessions serialize naturally on the event loop).
+ * session, all sharing one Hub (better-sqlite3 is synchronous, so concurrent
+ * sessions serialize naturally on the event loop). The hub handed in decides
+ * which spaces these sessions can reach.
  */
 export class McpHttpEndpoint {
   private transports = new Map<string, StreamableHTTPServerTransport>();
 
-  constructor(private ws: Workspace) {}
+  constructor(private hub: Hub) {}
 
   async handle(req: IncomingMessage, res: ServerResponse, body: unknown): Promise<void> {
     const sessionId = req.headers['mcp-session-id'] as string | undefined;
@@ -34,7 +35,7 @@ export class McpHttpEndpoint {
       transport.onclose = () => {
         if (transport!.sessionId) this.transports.delete(transport!.sessionId);
       };
-      const server = buildMcpServer(this.ws);
+      const server = buildMcpServer(this.hub);
       await server.connect(transport);
     }
 

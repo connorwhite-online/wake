@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { api, relTime, type NodeSummary } from '../api';
 import { SectionLabel } from '../components/bits';
 
 export default function DocsIndex() {
+  const { space = '' } = useParams<{ space: string }>();
   const [docs, setDocs] = useState<NodeSummary[] | null>(null);
   const [error, setError] = useState('');
 
@@ -12,11 +13,12 @@ export default function DocsIndex() {
   }, []);
 
   useEffect(() => {
+    if (!space) return;
     api
-      .docs()
+      .docs(space)
       .then((r) => setDocs(r.docs))
       .catch((e) => setError(String(e.message ?? e)));
-  }, []);
+  }, [space]);
 
   if (error) return <p className="empty">could not load resources — {error}</p>;
   if (!docs) return <p className="empty">loading…</p>;

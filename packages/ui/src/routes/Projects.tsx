@@ -1,21 +1,26 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { api, relTime, type ProjectSummary } from '../api';
 import { Orb, SectionLabel, StateBadge } from '../components/bits';
 
 const ACTIVE_STATES = ['in-progress', 'blocked'] as const;
 
 export default function Projects() {
+  const { space = '' } = useParams<{ space: string }>();
   const [projects, setProjects] = useState<ProjectSummary[] | null>(null);
   const [error, setError] = useState('');
 
   useEffect(() => {
     document.title = 'wake · projects';
+  }, []);
+
+  useEffect(() => {
+    if (!space) return;
     api
-      .projects()
+      .projects(space)
       .then((r) => setProjects(r.projects))
       .catch((e) => setError(String(e.message ?? e)));
-  }, []);
+  }, [space]);
 
   if (error) return <p className="empty">couldn't load projects — {error}</p>;
   if (!projects) return <p className="empty">…</p>;

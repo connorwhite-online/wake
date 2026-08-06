@@ -1,11 +1,26 @@
-# CONVENTIONS.md — how to work in this wake workspace
+# CONVENTIONS.md — how to work in this wake space
 
-This file is copied into every workspace by `wake init`. It's written for
-agents (including "dumb" ones without MCP access, working on raw files). If
-MCP tools are available, prefer them — they enforce these rules for you. Raw
-file edits are legal and the indexer will pick them up either way.
+This file sits in every space. It's written for agents (including "dumb" ones
+without MCP access, working on raw files). If MCP tools are available, prefer
+them — they enforce these rules for you. Raw file edits are legal and the
+indexer will pick them up either way.
 
-## File layout
+## Spaces and projects
+
+- A **space** is a boundary of visibility and collaboration: its own directory,
+  its own git repo, its own index. This file describes one space.
+- A space holds **many projects**. A project holds its issues; the space also
+  holds docs and artifacts, which can be attached to a project with a
+  `documents` edge (see Wiki links / links below).
+- A person belongs to several spaces (work, a side project, a client). Agents
+  reach every space the caller's token allows through one MCP endpoint — call
+  `list_spaces` first to see what you can reach, and pass `space` when creating
+  something. Anything addressed by id (`get_node`, `set_issue_state`,
+  `log_activity`, …) finds its own space; you never need to say it twice.
+- An agent handed a space-scoped URL (`/s/<slug>/mcp`) sees exactly that
+  space's graph and nothing else. That isolation is structural, not a policy.
+
+## File layout (inside one space)
 
 ```
 projects/<slug>/project.md          # project node (authored)
@@ -43,7 +58,7 @@ All node types share these base fields:
 | `author` | no (default `unknown`) | human name or agent name |
 | `tags` | no (default `[]`) | free-text array |
 | `links` | no (default `[]`) | typed edges: `{to: <id>, type: <edge-type>}` |
-| `space` | no (default `home`) | reserved for future multiplayer; leave alone |
+| `space` | no (default `home`) | vestigial — the directory a node lives in is what decides its space; leave it alone |
 | `archived` | no (default `false`) | soft removal — set via `archive_node`, not by hand |
 
 Edge types for `links[]`: `relates-to`, `blocks`, `documents`, `discusses`,
@@ -113,10 +128,11 @@ file casually, since paths are how the index recovers from a missing db.
 
 ## `space` field
 
-Every node carries `space` (default `"home"`). It's indirection for a future
-multiplayer model where a node's home space owns its writes and other spaces
-hold read references. In v1 there is exactly one space. Leave this field
-alone — don't set it to anything else.
+Every node carries `space` (default `"home"`), left over from the pre-spaces
+model. The directory a node lives in is what actually decides its space, so
+leave this field alone. It stays as the hook for the eventual placement model,
+where a node has a home space that owns writes while other spaces hold read
+references.
 
 ## Prefer MCP tools; raw edits are legal
 

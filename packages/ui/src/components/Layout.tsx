@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import { NavLink, Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { api, type ProjectSummary } from '../api';
+import { NavLink, Outlet, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { api, rememberSpace, type ProjectSummary } from '../api';
+import { MetaProvider } from '../meta';
+import SpaceSwitcher from './SpaceSwitcher';
 
 function Icon({ d }: { d: string }) {
   return (
@@ -18,22 +20,22 @@ const ICONS = {
   search: 'M11 18.5a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15zM20.5 20.5l-4-4',
 };
 
-const TABS = [
-  { to: '/', label: 'home', icon: ICONS.home, end: true },
-  { to: '/projects', label: 'projects', icon: ICONS.projects, end: false },
-  { to: '/docs', label: 'resources', icon: ICONS.resources, end: false },
-  { to: '/search', label: 'search', icon: ICONS.search, end: false },
-];
-
 export default function Layout() {
+  const { space = '' } = useParams<{ space: string }>();
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const navigate = useNavigate();
   const location = useLocation();
   const searchRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    api.projects().then((r) => setProjects(r.projects)).catch(() => {});
-  }, []);
+    if (!space) return;
+    rememberSpace(space);
+    setProjects([]);
+    api
+      .projects(space)
+      .then((r) => setProjects(r.projects))
+      .catch(() => {});
+  }, [space]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -46,66 +48,72 @@ export default function Layout() {
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
+  const base = `/s/${space}`;
+  const tabs = [
+    { to: base, label: 'home', icon: ICONS.home, end: true },
+    { to: `${base}/projects`, label: 'projects', icon: ICONS.projects, end: false },
+    { to: `${base}/docs`, label: 'resources', icon: ICONS.resources, end: false },
+    { to: `${base}/search`, label: 'search', icon: ICONS.search, end: false },
+  ];
+
   return (
-    <div className="shell">
-      <aside className="sidebar">
-        <Link to="/" className="wordmark">
-          wake
-        </Link>
-        <div className="sidebar-search">
-          <input
-            ref={searchRef}
-            placeholder="search  ⌘K"
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && e.currentTarget.value.trim()) {
-                navigate(`/search?q=${encodeURIComponent(e.currentTarget.value.trim())}`);
-                e.currentTarget.value = '';
-                e.currentTarget.blur();
-              }
-            }}
-          />
-        </div>
-        <nav className="nav-section">
-          <NavLink to="/" end className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>
-            home
-          </NavLink>
-          <NavLink to="/docs" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>
-            resources
-          </NavLink>
-        </nav>
-        {projects.length > 0 && (
+    <MetaProvider space={space}>
+      <div className="shell">
+        <aside className="sidebar">
+          <SpaceSwitcher current={space} />
+          <div className="sidebar-search">
+            <input
+              ref={searchRef}
+              placeholder="search  ⌘K"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && e.currentTarget.value.trim()) {
+                  navigate(`${base}/search?q=${encodeURIComponent(e.currentTarget.value.trim())}`);
+                  e.currentTarget.value = '';
+                  e.currentTarget.blur();
+                }
+              }}
+            />
+          </div>
           <nav className="nav-section">
-            <div className="nav-label">projects</div>
-            {projects.map((p) => (
-              <NavLink key={p.id} to={p.url} className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>
-                {p.title}
-              </NavLink>
-            ))}
+            <NavLink to={base} end className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>
+              home
+            </NavLink>
+            <NavLink to={`${base}/docs`} className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>
+              resources
+            </NavLink>
           </nav>
-        )}
-      </aside>
+          {projects.length > 0 && (
+            <nav className="nav-section">
+              <div className="nav-label">projects</div>
+              {projects.map((p) => (
+                <NavLink key={p.id} to={p.url} className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>
+                  {p.title}
+                </NavLink>
+              ))}
+            </nav>
+          )}
+        </aside>
 
-      <header className="topbar">
-        <Link to="/" className="wordmark">
-          wake
-        </Link>
-      </header>
+        <header className="topbar">
+          <SpaceSwitcher current={space} />
+        </header>
 
-      <main className="content">
-        {/* key on pathname so each navigation re-runs the enter animation */}
-        <div className="content-inner view-enter" key={location.pathname + location.search}>
-          <Outlet />
-        </div>
-      </main>
+        <main className="content">
+          {/* key on pathname so each navigation re-runs the enter animation */}
+          <div className="content-inner view-enter" key={location.pathname + location.search}>
+            <Outlet />
+          </div>
+        </main>
 
-      <nav className="tabbar">
-        {TABS.map((t) => (
-          <NavLink key={t.to} to={t.to} end={t.end} className={({ isActive }) => `tab${isActive ? ' active' : ''}`}>
-            <Icon d={t.icon} />
-            {t.label}
-          </NavLink>
-        ))}
-      </nav>
-    </div>
+        <nav className="tabbar">
+          {tabs.map((t) => (
+            <NavLink key={t.to} to={t.to} end={t.end} className={({ isActive }) => `tab${isActive ? ' active' : ''}`}>
+              <Icon d={t.icon} />
+              {t.label}
+            </NavLink>
+          ))}
+        </nav>
+      </div>
+    </MetaProvider>
   );
 }

@@ -5,6 +5,8 @@ import { streamSSE } from 'hono/streaming';
 import type { EventEmitter } from 'node:events';
 import matter from 'gray-matter';
 import type { Workspace } from '../core/workspace.js';
+import type { Hub, SpaceInfo } from '../core/spaces.js';
+import { loadUser } from '../core/spaces.js';
 import { renderMarkdown, nodeUrl } from '../core/markdown.js';
 import { loadSettings } from '../core/settings.js';
 import { rowToSummary, type NodeSummary } from '../core/search.js';
@@ -13,20 +15,24 @@ function issueCounts(ws: Workspace, projectId: string): Record<string, number> {
   return Object.fromEntries(
     (
       ws.db
-        .prepare(`SELECT state, COUNT(*) c FROM nodes WHERE type = 'issue' AND project_id = ? GROUP BY state`)
+        .prepare(`SELECT state, COUNT(*) c FROM nodes WHERE type = 'issue' AND project_id = ? AND archived = 0 GROUP BY state`)
         .all(projectId) as { state: string; c: number }[]
     ).map((r) => [r.state, r.c]),
   );
 }
 
-function withUrl(n: NodeSummary) {
-  return { ...n, url: nodeUrl(n) };
+function withUrl(ws: Workspace, n: NodeSummary) {
+  return { ...n, url: nodeUrl(n, ws.slug), space: ws.slug };
 }
 
 function activityWithUrls(ws: Workspace, rows: ReturnType<Workspace['recentActivity']>) {
   return rows.map((a) => {
     const node = ws.summary(a.node_id);
-    return { ...a, node_url: node ? nodeUrl(node) : null, node_type: node?.type ?? a.node_type };
+    return {
+      ...a,
+      node_url: node ? nodeUrl(node, ws.slug) : null,
+      node_type: node?.type ?? a.node_type,
+    };
   });
 }
 
@@ -57,85 +63,110 @@ function readStatus(ws: Workspace, project: NodeSummary): StatusInfo | null {
   };
 }
 
-/** Drop a leading <h1> that just repeats the page title — the UI already renders it. */
-function stripDuplicateH1(html: string, title: string): string {
-  const m = html.match(/^\s*<h1>(.*?)<\/h1>/);
-  if (m && m[1].replace(/<[^>]+>/g, '').trim().toLowerCase() === title.trim().toLowerCase()) {
-    return html.slice(m.index! + m[0].length);
-  }
-  return html;
-}
-
 function nodePayload(ws: Workspace, id: string) {
   const row = ws.requireRow(id);
   const summary = rowToSummary(row);
   const node = ws.loadById(id);
   const fm = node.fm as Record<string, unknown>;
   const links = (fm.links as { to: string; type: string }[] | undefined) ?? [];
-  const project =
-    summary.project_id != null ? (ws.summary(summary.project_id) ?? null) : null;
+  const project = summary.project_id != null ? (ws.summary(summary.project_id) ?? null) : null;
   return {
-    node: withUrl(summary),
-    body_html: stripDuplicateH1(renderMarkdown(ws, node.body), summary.title),
+    node: withUrl(ws, summary),
+    body_html: renderMarkdown(ws, node.body),
     project: project ? { id: project.id, title: project.title, slug: project.slug } : null,
     artifact:
       node.fm.type === 'artifact'
-        ? { file: node.fm.file, mime: node.fm.mime, url: `/api/artifacts/${node.fm.file}` }
+        ? { file: node.fm.file, mime: node.fm.mime, url: `/api/s/${ws.slug}/artifacts/${node.fm.file}` }
         : null,
     links: links
       .map((l) => {
         const target = ws.summary(l.to);
-        return target ? { ...withUrl(target), kind: l.type } : null;
+        return target ? { ...withUrl(ws, target), kind: l.type } : null;
       })
       .filter(Boolean),
-    backlinks: ws.backlinks(id).map((b) => ({ ...withUrl(b.node), kind: b.kind })),
-    activity: activityWithUrls(
-      ws,
-      // per-node activity rows carry no join info — they are all about this node
-      ws.activityFor(id, 100).map((a) => ({ ...a, node_title: summary.title, node_type: summary.type })),
-    ),
+    backlinks: ws.backlinks(id).map((b) => ({ ...withUrl(ws, b.node), kind: b.kind })),
+    activity: activityWithUrls(ws, ws.activityFor(id, 100) as ReturnType<Workspace['recentActivity']>),
   };
 }
 
-export function buildApi(ws: Workspace, bus: EventEmitter): Hono {
+function spaceSummary(hub: Hub, info: SpaceInfo) {
+  const ws = hub.workspace(info.slug);
+  const projects = ws.list({ type: 'project' });
+  return {
+    slug: info.slug,
+    name: info.name,
+    description: info.description,
+    url: `/s/${info.slug}`,
+    projects: projects.length,
+    issues: (ws.db.prepare(`SELECT COUNT(*) c FROM nodes WHERE type='issue' AND archived=0`).get() as { c: number }).c,
+    last_active: projects
+      .map((p) => ws.projectLastActive(p.id))
+      .filter(Boolean)
+      .sort()
+      .pop() ?? null,
+  };
+}
+
+export function buildApi(hub: Hub, bus: EventEmitter): Hono {
   const app = new Hono();
 
-  app.get('/api/meta', (c) => {
-    // settings re-read per request so a wake.json edit shows up on refresh
-    return c.json(loadSettings(ws.root));
+  /** Resolve the :space param to an open workspace, 404ing cleanly. */
+  const spaceOf = (c: { req: { param: (n: string) => string } }): Workspace | null => {
+    try {
+      return hub.workspace(c.req.param('space'));
+    } catch {
+      return null;
+    }
+  };
+
+  app.get('/api/me', (c) => {
+    const user = loadUser(hub.home);
+    return c.json({ user, spaces: hub.spaces().map((s) => spaceSummary(hub, s)) });
   });
 
-  const projectList = () =>
-    ws
-      .list({ type: 'project' })
-      .map((p) => ({ ...withUrl(p), counts: issueCounts(ws, p.id), last_active: ws.projectLastActive(p.id) }))
-      .sort((a, b) => (b.last_active ?? b.updated).localeCompare(a.last_active ?? a.updated));
+  app.get('/api/spaces', (c) => c.json({ spaces: hub.spaces().map((s) => spaceSummary(hub, s)) }));
 
-  app.get('/api/home', (c) => {
-    const projects = projectList();
+  app.get('/api/s/:space/meta', (c) => {
+    const ws = spaceOf(c);
+    if (!ws) return c.json({ error: 'no such space' }, 404);
+    // settings re-read per request so a wake.json edit shows up on refresh
+    return c.json({ ...loadSettings(ws.root), space: hub.info(ws.slug) });
+  });
+
+  app.get('/api/s/:space/home', (c) => {
+    const ws = spaceOf(c);
+    if (!ws) return c.json({ error: 'no such space' }, 404);
+    const projects = ws
+      .list({ type: 'project' })
+      .map((p) => ({ ...withUrl(ws, p), counts: issueCounts(ws, p.id), last_active: ws.projectLastActive(p.id) }))
+      .sort((a, b) => (b.last_active ?? b.updated).localeCompare(a.last_active ?? a.updated));
     const statuses = ws
       .list({ type: 'project' })
       .map((p) => readStatus(ws, p))
       .filter((s): s is StatusInfo => s !== null)
       .map(({ full_html: _full, ...rest }) => rest);
-    return c.json({
-      projects,
-      statuses,
-      activity: activityWithUrls(ws, ws.recentActivity(60)),
-    });
+    return c.json({ projects, statuses, activity: activityWithUrls(ws, ws.recentActivity(60)) });
   });
 
-  app.get('/api/projects', (c) => {
-    return c.json({ projects: projectList() });
+  app.get('/api/s/:space/projects', (c) => {
+    const ws = spaceOf(c);
+    if (!ws) return c.json({ error: 'no such space' }, 404);
+    const projects = ws
+      .list({ type: 'project' })
+      .map((p) => ({ ...withUrl(ws, p), counts: issueCounts(ws, p.id), last_active: ws.projectLastActive(p.id) }))
+      .sort((a, b) => (b.last_active ?? b.updated).localeCompare(a.last_active ?? a.updated));
+    return c.json({ projects });
   });
 
-  app.get('/api/projects/:slug', (c) => {
+  app.get('/api/s/:space/projects/:slug', (c) => {
+    const ws = spaceOf(c);
+    if (!ws) return c.json({ error: 'no such space' }, 404);
     const project = ws.projectBySlug(c.req.param('slug'));
     if (!project) return c.json({ error: 'no such project' }, 404);
     const node = ws.loadById(project.id);
     const issues = ws.list({ type: 'issue', project_id: project.id, limit: 500 });
     const grouped: Record<string, ReturnType<typeof withUrl>[]> = {};
-    for (const i of issues) (grouped[i.state ?? 'triage'] ??= []).push(withUrl(i));
+    for (const i of issues) (grouped[i.state ?? 'triage'] ??= []).push(withUrl(ws, i));
     const issueIds = new Set(issues.map((i) => i.id));
     const timeline = activityWithUrls(
       ws,
@@ -143,18 +174,22 @@ export function buildApi(ws: Workspace, bus: EventEmitter): Hono {
     ).slice(0, 100);
     const status = readStatus(ws, project);
     return c.json({
-      project: { ...withUrl(project), body_html: stripDuplicateH1(renderMarkdown(ws, node.body), project.title) },
-      status: status ? { generated: status.generated, generated_by: status.generated_by, html: status.full_html } : null,
+      project: { ...withUrl(ws, project), body_html: renderMarkdown(ws, node.body) },
+      status: status
+        ? { generated: status.generated, generated_by: status.generated_by, html: status.full_html }
+        : null,
       issues: grouped,
       timeline,
       docs: ws
         .backlinks(project.id)
         .filter((b) => b.node.type === 'doc')
-        .map((b) => withUrl(b.node)),
+        .map((b) => withUrl(ws, b.node)),
     });
   });
 
-  app.get('/api/nodes/:id', (c) => {
+  app.get('/api/s/:space/nodes/:id', (c) => {
+    const ws = spaceOf(c);
+    if (!ws) return c.json({ error: 'no such space' }, 404);
     try {
       return c.json(nodePayload(ws, c.req.param('id')));
     } catch {
@@ -162,30 +197,53 @@ export function buildApi(ws: Workspace, bus: EventEmitter): Hono {
     }
   });
 
-  app.get('/api/docs', (c) => {
-    return c.json({ docs: ws.list({ type: 'doc', limit: 500 }).map(withUrl) });
+  app.get('/api/s/:space/docs', (c) => {
+    const ws = spaceOf(c);
+    if (!ws) return c.json({ error: 'no such space' }, 404);
+    return c.json({ docs: ws.list({ type: 'doc', limit: 500 }).map((d) => withUrl(ws, d)) });
   });
 
-  app.get('/api/docs/*', (c) => {
-    const rel = `docs/${c.req.path.replace(/^\/api\/docs\//, '')}${c.req.path.endsWith('.md') ? '' : '.md'}`;
-    const row = ws.db.prepare(`SELECT id FROM nodes WHERE path = ?`).get(decodeURIComponent(rel)) as
-      | { id: string }
-      | undefined;
+  app.get('/api/s/:space/docs/*', (c) => {
+    const ws = spaceOf(c);
+    if (!ws) return c.json({ error: 'no such space' }, 404);
+    const tail = c.req.path.replace(new RegExp(`^/api/s/${ws.slug}/docs/`), '');
+    const rel = `docs/${decodeURIComponent(tail)}${tail.endsWith('.md') ? '' : '.md'}`;
+    const row = ws.db.prepare(`SELECT id FROM nodes WHERE path = ?`).get(rel) as { id: string } | undefined;
     if (!row) return c.json({ error: 'no such doc' }, 404);
     return c.json(nodePayload(ws, row.id));
   });
 
-  app.get('/api/search', (c) => {
+  app.get('/api/s/:space/search', (c) => {
+    const ws = spaceOf(c);
+    if (!ws) return c.json({ error: 'no such space' }, 404);
     const q = c.req.query('q') ?? '';
     if (!q.trim()) return c.json({ results: [] });
     const tags = (c.req.query('tags') ?? '').split(',').filter(Boolean);
     const results = ws
       .search({ query: q, type: c.req.query('type') || undefined, tags: tags.length ? tags : undefined })
-      .map((r) => ({ ...r, url: nodeUrl(r) }));
+      .map((r) => ({ ...r, url: nodeUrl(r, ws.slug), space: ws.slug }));
     return c.json({ results });
   });
 
-  app.get('/api/artifacts/:file', (c) => {
+  /** Search every visible space at once — the user's whole graph. */
+  app.get('/api/search', (c) => {
+    const q = c.req.query('q') ?? '';
+    if (!q.trim()) return c.json({ results: [] });
+    const results = hub
+      .all()
+      .flatMap(({ info, ws }) =>
+        ws
+          .search({ query: q, type: c.req.query('type') || undefined, limit: 20 })
+          .map((r) => ({ ...r, url: nodeUrl(r, ws.slug), space: ws.slug, space_name: info.name })),
+      )
+      .sort((a, b) => a.score - b.score)
+      .slice(0, 40);
+    return c.json({ results });
+  });
+
+  app.get('/api/s/:space/artifacts/:file', (c) => {
+    const ws = spaceOf(c);
+    if (!ws) return c.text('no such space', 404);
     const file = c.req.param('file');
     if (!/^[A-Za-z0-9._-]+$/.test(file) || file.includes('..')) return c.text('bad path', 400);
     const p = path.join(ws.root, 'artifacts', file);

@@ -4,9 +4,11 @@ import os from 'node:os';
 import path from 'node:path';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
-import { Workspace } from '../src/core/workspace.js';
+import { Hub } from '../src/core/spaces.js';
+import type { Workspace } from '../src/core/workspace.js';
 import { buildMcpServer } from '../src/mcp/server.js';
 
+let hub: Hub;
 let ws: Workspace;
 let client: Client;
 let root: string;
@@ -28,14 +30,15 @@ function safeParse(s: string): Record<string, unknown> {
 beforeAll(async () => {
   root = fs.mkdtempSync(path.join(os.tmpdir(), 'wake-mcp-'));
   for (const d of ['projects', 'docs', 'artifacts', 'activity']) fs.mkdirSync(path.join(root, d));
-  ws = Workspace.open(root);
-  const server = buildMcpServer(ws);
+  hub = Hub.single(root);
+  ws = hub.workspace(hub.spaces()[0].slug);
+  const server = buildMcpServer(hub);
   const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
   client = new Client({ name: 'test-agent', version: '0.0.0' });
   await Promise.all([server.connect(serverTransport), client.connect(clientTransport)]);
 });
 
-afterAll(() => ws.close());
+afterAll(() => hub.closeAll());
 
 describe('wake mcp server', () => {
   it('drives the full create → search → state → activity loop', async () => {
@@ -127,7 +130,7 @@ describe('wake mcp server', () => {
     expect(body.indexOf('weather hold')).toBeGreaterThan(body.indexOf('## Before'));
     expect(body.indexOf('weather hold')).toBeLessThan(body.indexOf('## After'));
 
-    const resource = await client.readResource({ uri: 'wake://docs/guides/launch-checklist' });
+    const resource = await client.readResource({ uri: `wake://s/${ws.slug}/docs/guides/launch-checklist` });
     expect((resource.contents[0] as { text: string }).text).toContain('weather hold');
   });
 
