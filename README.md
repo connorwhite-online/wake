@@ -82,6 +82,23 @@ activity/log.ndjson                   # workspace-level events
 .wake/index.db                        # disposable SQLite index (gitignored)
 ```
 
+## Deploy to Vercel (read-only)
+
+The repo deploys as a **read-only mirror** of `workspace/`: the UI is static,
+and the API runs as a serverless function that rebuilds the SQLite index into
+`/tmp` on cold start from the workspace files bundled with the deployment.
+
+1. Import the repo in Vercel (or `npx vercel` from the root). `vercel.json`
+   already carries the build command, output directory, function config, and
+   SPA rewrites — no settings needed.
+2. Every push to the production branch redeploys, so the flow is: agents write
+   locally over MCP → you commit/push the workspace → the hosted wake updates.
+   Reading from your phone needs nothing else.
+
+Writes (MCP, `wake serve` watcher) stay local by design — the deployment is
+the reading surface, git is the sync. Set `WAKE_SPACE` in Vercel only if your
+workspace lives somewhere other than `workspace/`.
+
 ## Development
 
 ```bash
