@@ -75,7 +75,7 @@ export function registerTools(server: McpServer, hub: Hub): void {
     'list_spaces',
     {
       description:
-        'List the spaces you can reach. A space is a visibility boundary holding many projects (plus their issues, docs and artifacts) — start here to orient, then pass a space slug to the other tools when creating things.',
+        "List the spaces you can reach. A space is a visibility boundary holding many projects (plus their issues, docs and artifacts) — start here to orient. Each space lists the `repos` whose work belongs in it: if you are working inside a repo, match its origin remote against those to choose the space, and ask the human if nothing matches.",
       inputSchema: {},
     },
     wrap(() => {
@@ -88,7 +88,13 @@ export function registerTools(server: McpServer, hub: Hub): void {
             slug: info.slug,
             name: info.name,
             description: info.description,
-            projects: projects.map((p) => ({ id: p.id, slug: p.slug, title: p.title })),
+            repos: info.repos,
+            projects: projects.map((p) => ({
+              id: p.id,
+              slug: p.slug,
+              title: p.title,
+              last_active: ws.projectLastActive(p.id),
+            })),
           };
         }),
       });
