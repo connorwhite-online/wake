@@ -16,6 +16,9 @@ export interface SpaceInfo {
   slug: string;
   name: string;
   description: string;
+  /** repos whose work belongs here, e.g. "github.com/you/api" — lets an agent
+   *  match the repo it is working in to the space it should write to */
+  repos: string[];
   path: string;
 }
 
@@ -77,7 +80,7 @@ export function scaffoldSpace(dir: string, name: string, description = ''): Spac
 
   const metaPath = path.join(dir, SPACE_FILE);
   if (!fs.existsSync(metaPath)) {
-    fs.writeFileSync(metaPath, JSON.stringify({ name, description }, null, 2) + '\n');
+    fs.writeFileSync(metaPath, JSON.stringify({ name, description, repos: [] }, null, 2) + '\n');
   }
   gitInit(dir);
   return readSpace(dir);
@@ -87,14 +90,25 @@ function readSpace(dir: string): SpaceInfo {
   const slug = path.basename(dir);
   let name = slug;
   let description = '';
+  let repos: string[] = [];
   try {
     const meta = JSON.parse(fs.readFileSync(path.join(dir, SPACE_FILE), 'utf8')) as Partial<SpaceInfo>;
     if (typeof meta.name === 'string' && meta.name.trim()) name = meta.name.trim();
     if (typeof meta.description === 'string') description = meta.description;
+    if (Array.isArray(meta.repos)) repos = meta.repos.filter((r): r is string => typeof r === 'string');
   } catch {
     // no space.json — the directory name is the name
   }
-  return { slug, name, description, path: dir };
+  return { slug, name, description, repos, path: dir };
+}
+
+/** Record that a repo's work belongs in this space (idempotent). */
+export function addRepoToSpace(spaceDir: string, repo: string): SpaceInfo {
+  const info = readSpace(spaceDir);
+  if (!info.repos.includes(repo)) info.repos.push(repo);
+  const { path: _p, slug: _s, ...meta } = info;
+  fs.writeFileSync(path.join(spaceDir, SPACE_FILE), JSON.stringify(meta, null, 2) + '\n');
+  return info;
 }
 
 /**

@@ -97,6 +97,7 @@ function spaceSummary(hub: Hub, info: SpaceInfo) {
     slug: info.slug,
     name: info.name,
     description: info.description,
+    repos: info.repos,
     url: `/s/${info.slug}`,
     projects: projects.length,
     issues: (ws.db.prepare(`SELECT COUNT(*) c FROM nodes WHERE type='issue' AND archived=0`).get() as { c: number }).c,

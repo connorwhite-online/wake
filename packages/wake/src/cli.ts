@@ -5,8 +5,10 @@ import { Command } from 'commander';
 import { openDb } from './core/db.js';
 import { dbPath } from './core/config.js';
 import { fullReindex, catchUp } from './core/indexer.js';
+import { connectRepo } from './core/connect.js';
 import {
   Hub,
+  addRepoToSpace,
   createSpace,
   listSpaces,
   loadUser,
@@ -154,6 +156,50 @@ program
     console.log(
       `seeded ${target.slug}: ${counts.projects} project, ${counts.issues} issues, ${counts.docs} docs, ${counts.artifacts} artifact`,
     );
+  });
+
+program
+  .command('connect')
+  .description('wire a repo up to wake: writes .mcp.json + a CLAUDE.md block so agents find it and know when to use it')
+  .argument('[dir]', 'repo directory', '.')
+  .option('--space <slug>', 'the space this repo\'s work belongs in')
+  .option('--url <url>', 'wake deployment base URL (default: $WAKE_URL, or the ${WAKE_URL} placeholder)')
+  .option('--scoped', 'give this repo a single-space endpoint instead of your whole account')
+  .action((dir: string, opts: { space?: string; url?: string; scoped?: boolean }) => {
+    const hub = openHub();
+    const spaces = hub.spaces();
+    // `--space` is also a global flag; accept it from either position
+    const asked = opts.space ?? program.opts<{ space?: string }>().space;
+    const slug = (asked && hub.info(asked) ? asked : undefined) ?? (spaces.length === 1 ? spaces[0].slug : undefined);
+    if (!slug && spaces.length > 1) {
+      throw new Error(`which space? pass --space <slug> (${spaces.map((s) => s.slug).join(', ')})`);
+    }
+    const info = slug ? hub.info(slug) : undefined;
+    if (slug && !info) throw new Error(`no space '${slug}' — try \`wake spaces\``);
+
+    const url = opts.url ?? process.env.WAKE_URL ?? '${WAKE_URL}';
+    const result = connectRepo({
+      repoDir: dir,
+      url,
+      space: slug,
+      spaceName: info?.name,
+      scoped: opts.scoped,
+    });
+
+    if (info && result.repo) {
+      addRepoToSpace(info.path, result.repo);
+      console.log(`recorded ${result.repo} in space '${info.slug}'`);
+    }
+    hub.closeAll();
+
+    console.log(`wrote .mcp.json  → ${result.endpoint}`);
+    console.log('wrote CLAUDE.md  → wake usage block');
+    if (url.includes('${')) {
+      console.log('\nset WAKE_URL and WAKE_TOKEN in the environment where agents run.');
+    } else {
+      console.log('\nset WAKE_TOKEN in the environment where agents run.');
+    }
+    console.log('commit both files so every session on this repo picks them up.');
   });
 
 program
