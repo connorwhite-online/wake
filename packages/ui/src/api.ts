@@ -42,6 +42,7 @@ export interface SpaceSummary {
   slug: string;
   name: string;
   description: string;
+  repos?: string[];
   url: string;
   projects: number;
   issues: number;
@@ -143,6 +144,27 @@ export function withToken(url: string): string {
   return t ? `${url}${url.includes('?') ? '&' : '?'}token=${encodeURIComponent(t)}` : url;
 }
 
+async function send<T>(method: string, path: string, body: unknown): Promise<T> {
+  const token = getToken();
+  const res = await fetch(path, {
+    method,
+    headers: {
+      'content-type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(body),
+  });
+  if (res.status === 401) {
+    window.dispatchEvent(new Event('wake:unauthorized'));
+    throw new Error('unauthorized');
+  }
+  if (!res.ok) {
+    const detail = (await res.json().catch(() => null)) as { error?: string } | null;
+    throw new Error(detail?.error ?? `${res.status} ${res.statusText}`);
+  }
+  return res.json() as Promise<T>;
+}
+
 async function get<T>(path: string): Promise<T> {
   const token = getToken();
   const res = await fetch(path, token ? { headers: { Authorization: `Bearer ${token}` } } : undefined);
@@ -170,6 +192,10 @@ export const api = {
   search: (space: string, q: string, type?: string) =>
     get<{ results: SearchResult[] }>(inSpace(space, `/search?q=${encodeURIComponent(q)}${type ? `&type=${type}` : ''}`)),
   searchEverywhere: (q: string) => get<{ results: SearchResult[] }>(`/api/search?q=${encodeURIComponent(q)}`),
+  createSpace: (name: string) => send<{ space: SpaceSummary }>('POST', '/api/spaces', { name }),
+  updateSpace: (slug: string, patch: { name?: string; description?: string }) =>
+    send<{ space: SpaceSummary }>('PATCH', `/api/spaces/${encodeURIComponent(slug)}`, patch),
+  setName: (name: string) => send<{ user: UserProfile }>('PATCH', '/api/me', { name }),
 };
 
 const LAST_VISIT_KEY = 'wake:last-visit';

@@ -102,6 +102,16 @@ function readSpace(dir: string): SpaceInfo {
   return { slug, name, description, repos, path: dir };
 }
 
+/** Rename a space or change its description; the slug (its directory) is stable. */
+export function updateSpace(spaceDir: string, patch: { name?: string; description?: string }): SpaceInfo {
+  const info = readSpace(spaceDir);
+  if (typeof patch.name === 'string' && patch.name.trim()) info.name = patch.name.trim().slice(0, 80);
+  if (typeof patch.description === 'string') info.description = patch.description.slice(0, 280);
+  const { path: _p, slug: _s, ...meta } = info;
+  fs.writeFileSync(path.join(spaceDir, SPACE_FILE), JSON.stringify(meta, null, 2) + '\n');
+  return info;
+}
+
 /** Record that a repo's work belongs in this space (idempotent). */
 export function addRepoToSpace(spaceDir: string, repo: string): SpaceInfo {
   const info = readSpace(spaceDir);
@@ -177,7 +187,13 @@ export function loadUser(home: string): UserProfile {
   } catch {
     // no profile yet
   }
-  const fallback = process.env.WAKE_USER || os.userInfo().username || 'you';
+  // a container's unix user ("root") is a worse guess than admitting we don't know
+  let fallback = process.env.WAKE_USER;
+  if (!fallback) {
+    const local = os.userInfo().username;
+    if (local && !['root', 'node', 'nobody', 'app'].includes(local)) fallback = local;
+  }
+  fallback ||= 'you';
   return { name: fallback, handle: slugify(fallback) };
 }
 

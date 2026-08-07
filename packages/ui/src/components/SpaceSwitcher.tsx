@@ -1,13 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { rememberSpace, relTime } from '../api';
+import { api, rememberSpace, relTime } from '../api';
 import { useAccount } from '../meta';
 import { Orb } from './bits';
 
 /** Your profile + the space you're in; opens a menu of the spaces you can reach. */
 export default function SpaceSwitcher({ current }: { current: string }) {
-  const { user, spaces } = useAccount();
+  const { user, spaces, reload } = useAccount();
   const [open, setOpen] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
   const navigate = useNavigate();
   const ref = useRef<HTMLDivElement>(null);
 
@@ -25,12 +28,34 @@ export default function SpaceSwitcher({ current }: { current: string }) {
     };
   }, [open]);
 
+  useEffect(() => {
+    if (!open) {
+      setCreating(false);
+      setError('');
+    }
+  }, [open]);
+
   const active = spaces.find((s) => s.slug === current);
 
   const go = (slug: string) => {
     rememberSpace(slug);
     setOpen(false);
     navigate(`/s/${slug}`);
+  };
+
+  const create = async (name: string) => {
+    if (!name.trim() || busy) return;
+    setBusy(true);
+    setError('');
+    try {
+      const { space } = await api.createSpace(name.trim());
+      await reload();
+      go(space.slug);
+    } catch (e) {
+      setError(String((e as Error).message ?? e));
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
@@ -65,10 +90,48 @@ export default function SpaceSwitcher({ current }: { current: string }) {
               </span>
             </button>
           ))}
-          {spaces.length === 0 && <div className="switcher-empty">no spaces yet</div>}
-          <div className="switcher-foot">
-            new spaces come from the CLI: <code>wake space new "Name"</code>
-          </div>
+
+          {error && <div className="switcher-error">{error}</div>}
+
+          {creating ? (
+            <form
+              className="switcher-new"
+              onSubmit={(e) => {
+                e.preventDefault();
+                const input = e.currentTarget.elements.namedItem('name') as HTMLInputElement;
+                void create(input.value);
+              }}
+            >
+              <input name="name" placeholder="Space name" autoFocus disabled={busy} maxLength={80} />
+              <button type="submit" disabled={busy}>
+                {busy ? '…' : 'Create'}
+              </button>
+            </form>
+          ) : (
+            <button className="switcher-item add" onClick={() => setCreating(true)}>
+              <span className="switcher-plus">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round">
+                  <path d="M12 6v12M6 12h12" />
+                </svg>
+              </span>
+              <span className="switcher-item-body">
+                <span className="switcher-item-name">New space</span>
+                <span className="switcher-item-meta">a separate boundary, e.g. a client or a side project</span>
+              </span>
+            </button>
+          )}
+
+          <button
+            className="switcher-item quiet"
+            onClick={() => {
+              setOpen(false);
+              navigate(`/s/${current}/settings`);
+            }}
+          >
+            <span className="switcher-item-body">
+              <span className="switcher-item-meta">settings — rename this space, set your name</span>
+            </span>
+          </button>
         </div>
       )}
     </div>

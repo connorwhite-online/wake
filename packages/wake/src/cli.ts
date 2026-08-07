@@ -34,7 +34,9 @@ function openHub(): Hub {
     const asPath = path.resolve(space);
     if (looksLikeSpace(asPath)) return Hub.single(asPath);
   }
-  if (!home && process.env.WAKE_SPACE) {
+  // WAKE_HOME means multi-space and wins over a lingering WAKE_SPACE from an
+  // older deploy — otherwise the stale var pins you to one directory-named space
+  if (!home && !process.env.WAKE_HOME && process.env.WAKE_SPACE) {
     const legacy = path.resolve(process.env.WAKE_SPACE);
     if (looksLikeSpace(legacy)) return Hub.single(legacy);
   }

@@ -59,7 +59,7 @@ export function buildHttpApp(hub: Hub, opts: HttpAppOptions = {}): Hono<{ Bindin
   const apiFor = (scope: string): Hono => {
     let api = apis.get(scope);
     if (!api) {
-      api = buildApi(scope === '*' ? hub : hub.scopedTo(scope), bus);
+      api = buildApi(scope === '*' ? hub : hub.scopedTo(scope), bus, { canCreateSpaces: scope === '*' });
       apis.set(scope, api);
     }
     return api;
