@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { api, relTime, type ProjectSummary } from '../api';
-import { Orb, SectionLabel, StateBadge } from '../components/bits';
+import { Empty, Orb, StateBadge } from '../components/bits';
 
 const ACTIVE_STATES = ['in-progress', 'blocked'] as const;
 
@@ -25,13 +25,11 @@ export default function Projects() {
   if (error) return <p className="empty">couldn't load projects — {error}</p>;
   if (!projects) return <p className="empty">…</p>;
   if (!projects.length) {
-    return <p className="empty">no projects yet — seed the workspace or let an agent create one over MCP</p>;
+    return <Empty>no projects here yet — an agent creates one when it starts work in this space</Empty>;
   }
 
   return (
     <div>
-      <h1 className="page-title">projects</h1>
-      <SectionLabel count={projects.length}>all projects</SectionLabel>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
         {projects.map((p) => {
           const total = Object.values(p.counts).reduce((a, b) => a + b, 0);

@@ -182,20 +182,69 @@ const Chevron = (
   </svg>
 );
 
-/** One issue, one line: glyph, title, then meta trailing right (Linear's list). */
-export function IssueRow({ issue }: { issue: NodeSummary & { url: string } }) {
+/**
+ * One thing, one line: glyph, title, meta trailing right. Every list in wake
+ * is made of these, so issues, docs and results all read the same way.
+ */
+export function NodeRow({
+  to,
+  lead,
+  title,
+  meta,
+  dimmed,
+}: {
+  to: string;
+  lead?: React.ReactNode;
+  title: string;
+  meta?: React.ReactNode;
+  dimmed?: boolean;
+}) {
   return (
-    <Link to={issue.url} className={`issue-row${issue.state === 'dropped' ? ' dropped' : ''}`}>
-      <StateDot state={issue.state} />
-      <span className="title">{issue.title}</span>
-      <span className="row-meta">
-        <TagList tags={issue.tags} />
-        <span className="when" title={relTime(issue.updated)}>
-          {compactTime(issue.updated)}
-        </span>
-      </span>
+    <Link to={to} className={`issue-row${dimmed ? ' dropped' : ''}`}>
+      {lead}
+      <span className="title">{title}</span>
+      {meta && <span className="row-meta">{meta}</span>}
       {Chevron}
     </Link>
+  );
+}
+
+export function IssueRow({ issue }: { issue: NodeSummary & { url: string } }) {
+  return (
+    <NodeRow
+      to={issue.url}
+      lead={<StateDot state={issue.state} />}
+      title={issue.title}
+      dimmed={issue.state === 'dropped'}
+      meta={
+        <>
+          <TagList tags={issue.tags} />
+          <span className="when" title={relTime(issue.updated)}>
+            {compactTime(issue.updated)}
+          </span>
+        </>
+      }
+    />
+  );
+}
+
+/** A doc in a list — same row language, type glyph instead of a state. */
+export function DocRow({ doc }: { doc: NodeSummary & { url: string } }) {
+  return (
+    <NodeRow
+      to={doc.url}
+      lead={
+        <span className="state-dot" style={{ color: 'var(--ink-faint)' }}>
+          <TypeIcon type="doc" />
+        </span>
+      }
+      title={doc.title}
+      meta={
+        <span className="when" title={relTime(doc.updated)}>
+          {compactTime(doc.updated)}
+        </span>
+      }
+    />
   );
 }
 

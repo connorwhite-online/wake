@@ -487,6 +487,9 @@ span.wiki-broken {
   opacity: 0.7;
 }
 .section-label .count { font-weight: 400; letter-spacing: 0; }
+/* a page shouldn't open with a dead gap */
+.content-inner > .section-label:first-child,
+.content-inner > div:first-child > .section-label:first-child { margin-top: 0.35rem; }
 
 .card, .status-card {
   background: var(--card);
@@ -652,23 +655,9 @@ li:hover > .orb, .card-link:hover .orb { transform: scale(1.15); }
 .rollup { display: flex; flex-direction: column; gap: 0.85rem; margin-top: 1rem; }
 .rollup.compact { gap: 0.55rem; margin-top: 0.75rem; }
 
-.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(5rem, 1fr)); gap: 0.5rem; }
-.tile {
-  padding: 0.55rem 0.7rem;
-  border-radius: var(--r-md);
-  background: var(--bg);
-  box-shadow: var(--chip-inset);
-}
-.tile.toned {
-  background: oklch(0.95 calc(var(--sc) * 0.3) var(--sh));
-  color: oklch(0.38 var(--sc) var(--sh));
-}
-@media (prefers-color-scheme: dark) {
-  .tile.toned { background: oklch(0.31 calc(var(--sc) * 0.4) var(--sh)); color: oklch(0.87 calc(var(--sc) * 0.7) var(--sh)); }
-}
-.tile-value { font-size: 1.35rem; font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums; }
-.tile-label { font-size: 0.72rem; color: var(--ink-faint); margin-top: 0.1rem; white-space: nowrap; }
-.tile.toned .tile-label { color: inherit; opacity: 0.75; }
+.rollup-lead { font-size: 0.95rem; color: var(--ink-soft); }
+.rollup-lead strong { font-size: 1.35rem; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
+.rollup-of { color: var(--ink-faint); }
 
 .statebar-wrap { display: flex; flex-direction: column; gap: 0.5rem; }
 .statebar {
@@ -811,6 +800,4 @@ li:hover > .orb, .card-link:hover .orb { transform: scale(1.15); }
   .issue-row { min-height: 44px; }
   .issue-row .row-meta .tag-list { display: none; }
 
-  .tiles { grid-template-columns: repeat(3, 1fr); }
-  .tile-value { font-size: 1.2rem; }
 }

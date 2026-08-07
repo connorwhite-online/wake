@@ -27,7 +27,6 @@ export default function Search() {
 
   return (
     <div>
-      <h1 className="page-title">search</h1>
       <input
         className="search-input"
         defaultValue={q}
@@ -59,11 +58,11 @@ export default function Search() {
       {q && results && (
         <>
           <p className="page-meta">
-            {results.length} results for '{q}'
+            {results.length === 0
+              ? `nothing matches “${q}”`
+              : `${results.length} result${results.length === 1 ? '' : 's'} for “${q}”`}
           </p>
-          {results.length === 0 ? (
-            <p className="empty">nothing found</p>
-          ) : (
+          {results.length === 0 ? null : (
             results.map((r) => (
               <Link to={r.url} className="result-row" key={r.id}>
                 {r.state ? (
