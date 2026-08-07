@@ -248,26 +248,117 @@ export function DocRow({ doc }: { doc: NodeSummary & { url: string } }) {
   );
 }
 
-export function Timeline({ rows, since }: { rows: ActivityRow[]; since?: string | null }) {
+/** One actor's uninterrupted run of events on one node — a beat of the story. */
+interface Beat {
+  actor: string;
+  nodeId: string;
+  nodeTitle: string;
+  nodeUrl: string | null;
+  ts: string;
+  events: ActivityRow[];
+}
+
+function toBeats(rows: ActivityRow[]): Beat[] {
+  const beats: Beat[] = [];
+  for (const row of rows) {
+    const last = beats[beats.length - 1];
+    if (last && last.actor === row.actor && last.nodeId === row.node_id) {
+      last.events.push(row);
+      continue;
+    }
+    beats.push({
+      actor: row.actor,
+      nodeId: row.node_id,
+      nodeTitle: row.node_title ?? row.node_id,
+      nodeUrl: row.node_url ?? null,
+      ts: row.ts,
+      events: [row],
+    });
+  }
+  return beats;
+}
+
+function dayLabel(iso: string): string {
+  const start = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const then = new Date(iso);
+  const days = Math.round((start(new Date()) - start(then)) / 86_400_000);
+  if (days <= 0) return 'today';
+  if (days === 1) return 'yesterday';
+  if (days < 7) return then.toLocaleDateString(undefined, { weekday: 'long' });
+  return then.toLocaleDateString(undefined, { month: 'long', day: 'numeric' });
+}
+
+/**
+ * The story of what happened, not a log. Consecutive events by one actor on
+ * one node collapse into a beat; beats group under the day they happened; the
+ * node leads, because what changed is the story and who did it is attribution.
+ */
+export function Timeline({
+  rows,
+  since,
+  of,
+}: {
+  rows: ActivityRow[];
+  since?: string | null;
+  /** id of the node being viewed — its title is implied, so lead with the actor */
+  of?: string;
+}) {
   if (!rows.length) return <Empty>no activity yet — the water is still</Empty>;
+
+  const beats = toBeats(rows);
+  const firstSeen = since ? beats.findIndex((b) => b.ts <= since) : -1;
+  const days: { label: string; beats: Beat[]; from: number }[] = [];
+  beats.forEach((beat, i) => {
+    const label = dayLabel(beat.ts);
+    const bucket = days[days.length - 1];
+    if (bucket?.label === label) bucket.beats.push(beat);
+    else days.push({ label, beats: [beat], from: i });
+  });
+
+  let index = 0;
   return (
-    <ul className="timeline">
-      {rows.map((a, i) => (
-        <li key={`${a.node_id}-${a.ts}-${i}`} style={{ ['--i' as string]: Math.min(i, 10) }}>
-          <Orb name={a.actor} />
-          <span className="what">
-            {since && a.ts > since && <span className="new-marker" title="since your last visit" />}
-            <span className="actor">{a.actor}</span>{' '}
-            <span className="on-node">
-              {a.kind === 'created' ? 'created' : 'on'}{' '}
-              {a.node_url ? <Link to={a.node_url}>{a.node_title ?? a.node_id}</Link> : (a.node_title ?? a.node_id)}
-            </span>
-          </span>
-          <span className="when">{relTime(a.ts)}</span>
-          <span className="summary">{eventSummary(a)}</span>
-        </li>
+    <div className="feed">
+      {days.map((day) => (
+        <div className="feed-day" key={`${day.label}-${day.from}`}>
+          <div className="feed-day-label">{day.label}</div>
+          {day.beats.map((beat) => {
+            const position = index++;
+            const isOwnNode = of !== undefined && beat.nodeId === of;
+            return (
+              <div key={`${beat.nodeId}-${beat.ts}`}>
+                {position === firstSeen && firstSeen > 0 && (
+                  <div className="feed-seen">seen before this</div>
+                )}
+                <div className="beat" style={{ ['--i' as string]: Math.min(position, 10) }}>
+                  <Orb name={beat.actor} />
+                  <div className="beat-body">
+                    <div className="beat-head">
+                      {isOwnNode ? (
+                        <span className="beat-title">{beat.actor}</span>
+                      ) : beat.nodeUrl ? (
+                        <Link to={beat.nodeUrl} className="beat-title">
+                          {beat.nodeTitle}
+                        </Link>
+                      ) : (
+                        <span className="beat-title">{beat.nodeTitle}</span>
+                      )}
+                      <span className="when" title={relTime(beat.ts)}>
+                        {isOwnNode ? compactTime(beat.ts) : `${beat.actor} · ${compactTime(beat.ts)}`}
+                      </span>
+                    </div>
+                    {beat.events.map((e, k) => (
+                      <div className="beat-line" key={`${e.ts}-${k}`}>
+                        {eventSummary(e)}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       ))}
-    </ul>
+    </div>
   );
 }
 
