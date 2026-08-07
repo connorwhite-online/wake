@@ -95,11 +95,29 @@ fly secrets set WAKE_TOKEN=$(openssl rand -hex 24)   # required before exposing
 fly deploy
 ```
 
+### As a Connector in the Claude apps
+
+wake speaks OAuth 2.1, so it can be added under **Settings → Connectors → Add
+custom connector** — that flow has no static-token path, which is why the
+static `WAKE_TOKEN` alone isn't enough there.
+
+Paste `https://<your-app>/mcp`. Claude registers itself (RFC 7591), you land on
+wake's consent screen, and you **choose what it may reach** — all spaces, or a
+single one. Confirm with your `WAKE_TOKEN`; that's the login. Requires
+`WAKE_TOKEN` to be set (otherwise there's no owner to authorize as), a public
+HTTPS origin, and `WAKE_PUBLIC_URL` if you're behind a proxy that rewrites the
+host.
+
+`wake clients` lists what's connected; `wake clients revoke <id>` drops a client
+and every token it holds. Access tokens last an hour and refresh; tokens are
+stored hashed, so the store leaks nothing usable.
+
 Env: `WAKE_HOME` (root holding `spaces/`, default `/data` in the container),
 `WAKE_TOKEN` (bearer auth for `/mcp` and `/api` — without it, anyone who
 reaches the port can read and write), `WAKE_TOKEN_<SLUG>` (a token scoped to
 one space), `WAKE_GIT_SYNC=1` (debounced auto-commit per space so git history
-stays the record), `WAKE_GIT_PUSH=1`, `WAKE_DEFAULT_SPACE`, `WAKE_HOST`/`PORT`.
+stays the record), `WAKE_GIT_PUSH=1`, `WAKE_DEFAULT_SPACE`, `WAKE_PUBLIC_URL`
+(the origin to advertise in OAuth metadata), `WAKE_HOST`/`PORT`.
 
 A pre-spaces volume (one workspace at `$WAKE_HOME/workspace`) is folded into
 `spaces/<name>` automatically on first boot.
