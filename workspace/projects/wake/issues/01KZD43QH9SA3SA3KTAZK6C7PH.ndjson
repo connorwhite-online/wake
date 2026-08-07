@@ -1,0 +1,2 @@
+{"ts":"2026-08-07T03:26:17.644Z","actor":"claude-code","node":"01KZD43QH9SA3SA3KTAZK6C7PH","kind":"created","payload":{"type":"issue","title":"Visual status: charts computed live from the index","state":"in-progress"}}
+{"ts":"2026-08-07T03:26:17.657Z","actor":"claude-code","node":"01KZD43QH9SA3SA3KTAZK6C7PH","kind":"state_changed","payload":{"from":"in-progress","to":"done","reason":"Shipped, and regenerate_status now asks for 2-4 sentences saying what moved and what is stuck, not what the charts already show."}}

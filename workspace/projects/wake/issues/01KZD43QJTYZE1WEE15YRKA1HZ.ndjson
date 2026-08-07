@@ -1,0 +1,3 @@
+{"ts":"2026-08-07T03:26:17.692Z","actor":"claude-code","node":"01KZD43QJTYZE1WEE15YRKA1HZ","kind":"created","payload":{"type":"issue","title":"OAuth 2.1 so wake can be a Claude custom Connector","state":"in-progress"}}
+{"ts":"2026-08-07T03:26:17.699Z","actor":"claude-code","node":"01KZD43QJTYZE1WEE15YRKA1HZ","kind":"note","payload":{"text":"Untested against the real connector UI — no way to drive that flow from a sandbox. Tested against the specs instead."}}
+{"ts":"2026-08-07T03:26:17.705Z","actor":"claude-code","node":"01KZD43QJTYZE1WEE15YRKA1HZ","kind":"state_changed","payload":{"from":"in-progress","to":"done","reason":"Shipped with 8 tests covering the flow end to end, including code replay, refresh rotation and hashed storage."}}

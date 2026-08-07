@@ -1,0 +1,2 @@
+{"ts":"2026-08-07T03:26:17.711Z","actor":"claude-code","node":"01KZD43QKET0T39CHXH9ZPS78N","kind":"created","payload":{"type":"issue","title":"Spaces could only be created from the CLI","state":"in-progress"}}
+{"ts":"2026-08-07T03:26:17.718Z","actor":"claude-code","node":"01KZD43QKET0T39CHXH9ZPS78N","kind":"state_changed","payload":{"from":"in-progress","to":"done","reason":"Shipped. Creating requires the full-access token; a space-scoped connector gets a 403 rather than being able to mint spaces."}}
