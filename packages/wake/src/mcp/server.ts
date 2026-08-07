@@ -25,6 +25,10 @@ Getting oriented:
   against those to pick the right space. Ask the human if nothing matches.
 - search before starting substantial work: the decision, the doc, or a
   duplicate issue may already be recorded.
+- Then pick the PROJECT your work belongs to. If nothing in that space matches
+  what you are working on, create one (create_node type=project) rather than
+  filing into an unrelated project because it was the only one there — a
+  project is cheap, and misfiled work is worse than an extra project.
 
 The rhythm while you work:
 1. File multi-step work as an issue (create_node type=issue) BEFORE starting,
