@@ -6,7 +6,7 @@ import type { EventEmitter } from 'node:events';
 import matter from 'gray-matter';
 import type { Workspace } from '../core/workspace.js';
 import type { Hub, SpaceInfo } from '../core/spaces.js';
-import { loadUser } from '../core/spaces.js';
+import { createSpace, loadUser, saveUser, updateSpace } from '../core/spaces.js';
 import { renderMarkdown, nodeUrl } from '../core/markdown.js';
 import { computeRollup } from '../core/rollup.js';
 import { loadSettings } from '../core/settings.js';
@@ -109,7 +109,12 @@ function spaceSummary(hub: Hub, info: SpaceInfo) {
   };
 }
 
-export function buildApi(hub: Hub, bus: EventEmitter): Hono {
+export interface ApiOptions {
+  /** only the full-access caller may add spaces; a scoped token may not */
+  canCreateSpaces?: boolean;
+}
+
+export function buildApi(hub: Hub, bus: EventEmitter, opts: ApiOptions = {}): Hono {
   const app = new Hono();
 
   /** Resolve the :space param to an open workspace, 404ing cleanly. */
@@ -127,6 +132,39 @@ export function buildApi(hub: Hub, bus: EventEmitter): Hono {
   });
 
   app.get('/api/spaces', (c) => c.json({ spaces: hub.spaces().map((s) => spaceSummary(hub, s)) }));
+
+  app.patch('/api/me', async (c) => {
+    const body = (await c.req.json().catch(() => null)) as { name?: string } | null;
+    if (!body?.name?.trim()) return c.json({ error: 'name is required' }, 400);
+    const name = body.name.trim().slice(0, 80);
+    const profile = { name, handle: name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'you' };
+    saveUser(hub.home, profile);
+    return c.json({ user: profile });
+  });
+
+  app.post('/api/spaces', async (c) => {
+    if (!opts.canCreateSpaces) return c.json({ error: 'this token cannot create spaces' }, 403);
+    const body = (await c.req.json().catch(() => null)) as { name?: string } | null;
+    if (!body?.name?.trim()) return c.json({ error: 'name is required' }, 400);
+    try {
+      const info = createSpace(hub.home, body.name.trim());
+      hub.refresh();
+      return c.json({ space: spaceSummary(hub, info) }, 201);
+    } catch (err) {
+      return c.json({ error: (err as Error).message }, 409);
+    }
+  });
+
+  app.patch('/api/spaces/:slug', async (c) => {
+    const info = hub.info(c.req.param('slug'));
+    if (!info) return c.json({ error: 'no such space' }, 404);
+    const body = (await c.req.json().catch(() => null)) as { name?: string; description?: string } | null;
+    if (!body) return c.json({ error: 'body must be JSON' }, 400);
+    const updated = updateSpace(info.path, body);
+    info.name = updated.name;
+    info.description = updated.description;
+    return c.json({ space: spaceSummary(hub, info) });
+  });
 
   app.get('/api/s/:space/meta', (c) => {
     const ws = spaceOf(c);

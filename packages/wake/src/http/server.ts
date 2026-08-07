@@ -9,6 +9,7 @@ import type { Hub } from '../core/spaces.js';
 import { startWatcher } from '../core/watcher.js';
 import { startGitSync } from '../core/gitsync.js';
 import { buildApi } from './api.js';
+import { buildOAuth, publicOrigin } from './oauth.js';
 import { McpHttpEndpoint } from './mcp-http.js';
 
 const MIME: Record<string, string> = {
@@ -58,7 +59,7 @@ export function buildHttpApp(hub: Hub, opts: HttpAppOptions = {}): Hono<{ Bindin
   const apiFor = (scope: string): Hono => {
     let api = apis.get(scope);
     if (!api) {
-      api = buildApi(scope === '*' ? hub : hub.scopedTo(scope), bus);
+      api = buildApi(scope === '*' ? hub : hub.scopedTo(scope), bus, { canCreateSpaces: scope === '*' });
       apis.set(scope, api);
     }
     return api;
@@ -75,14 +76,24 @@ export function buildHttpApp(hub: Hub, opts: HttpAppOptions = {}): Hono<{ Bindin
 
   const spaceTokens = () => hub.spaces().map((s) => [s.slug, envTokenFor(s.slug)] as const).filter(([, t]) => !!t);
 
+  // OAuth 2.1, for the Claude apps' connector flow (no static-token path there).
+  // Its tokens resolve to the same grants as static ones.
+  const { app: oauthApp, provider: oauth } = buildOAuth(hub, token);
+  app.route('/', oauthApp);
+
   /** Resolve a presented bearer token to what it may reach. */
   const grantFor = (presented: string | undefined): Grant => {
     const scoped = spaceTokens();
     if (!token && scoped.length === 0) return '*'; // no auth configured (localhost dev)
     if (presented && token && presented === token) return '*';
     const match = scoped.find(([, t]) => t === presented);
-    return match ? match[0] : null;
+    if (match) return match[0];
+    return presented ? oauth.validate(presented) : null;
   };
+
+  /** RFC 9728: point an unauthorized client at the metadata that starts OAuth. */
+  const challenge = (req: Request) =>
+    `Bearer resource_metadata="${publicOrigin(req)}/.well-known/oauth-protected-resource"`;
 
   const presentedToken = (c: { req: { header: (n: string) => string | undefined; query: (n: string) => string | undefined } }) => {
     const header = c.req.header('authorization');
@@ -94,7 +105,9 @@ export function buildHttpApp(hub: Hub, opts: HttpAppOptions = {}): Hono<{ Bindin
   app.all('/mcp', async (c) => {
     const grant = grantFor(presentedToken(c));
     if (!grant) {
-      return c.json({ jsonrpc: '2.0', error: { code: -32001, message: 'unauthorized' }, id: null }, 401);
+      return c.json({ jsonrpc: '2.0', error: { code: -32001, message: 'unauthorized' }, id: null }, 401, {
+        'WWW-Authenticate': challenge(c.req.raw),
+      });
     }
     const body = c.req.method === 'POST' ? await c.req.json().catch(() => undefined) : undefined;
     await endpointFor(grant).handle(c.env.incoming, c.env.outgoing, body);
@@ -106,7 +119,9 @@ export function buildHttpApp(hub: Hub, opts: HttpAppOptions = {}): Hono<{ Bindin
     const slug = c.req.param('space');
     const grant = grantFor(presentedToken(c));
     if (!grant || (grant !== '*' && grant !== slug) || !hub.info(slug)) {
-      return c.json({ jsonrpc: '2.0', error: { code: -32001, message: 'unauthorized' }, id: null }, 401);
+      return c.json({ jsonrpc: '2.0', error: { code: -32001, message: 'unauthorized' }, id: null }, 401, {
+        'WWW-Authenticate': challenge(c.req.raw),
+      });
     }
     const body = c.req.method === 'POST' ? await c.req.json().catch(() => undefined) : undefined;
     await endpointFor(slug).handle(c.env.incoming, c.env.outgoing, body);

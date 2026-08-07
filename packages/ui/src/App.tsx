@@ -11,6 +11,7 @@ import NodePage from './routes/NodePage';
 import DocsIndex from './routes/DocsIndex';
 import Doc from './routes/Doc';
 import Search from './routes/Search';
+import Settings from './routes/Settings';
 
 /** Land in the space you were last in, else your first one. */
 function SpaceRedirect() {
@@ -46,6 +47,7 @@ export default function App() {
             <Route path="docs" element={<DocsIndex />} />
             <Route path="docs/*" element={<Doc />} />
             <Route path="search" element={<Search />} />
+            <Route path="settings" element={<Settings />} />
           </Route>
           <Route path="*" element={<SpaceRedirect />} />
         </Routes>

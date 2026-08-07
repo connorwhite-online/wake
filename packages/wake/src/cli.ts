@@ -6,6 +6,7 @@ import { openDb } from './core/db.js';
 import { dbPath } from './core/config.js';
 import { fullReindex, catchUp } from './core/indexer.js';
 import { connectRepo } from './core/connect.js';
+import { OAuthProvider } from './core/oauth.js';
 import {
   Hub,
   addRepoToSpace,
@@ -33,7 +34,9 @@ function openHub(): Hub {
     const asPath = path.resolve(space);
     if (looksLikeSpace(asPath)) return Hub.single(asPath);
   }
-  if (!home && process.env.WAKE_SPACE) {
+  // WAKE_HOME means multi-space and wins over a lingering WAKE_SPACE from an
+  // older deploy — otherwise the stale var pins you to one directory-named space
+  if (!home && !process.env.WAKE_HOME && process.env.WAKE_SPACE) {
     const legacy = path.resolve(process.env.WAKE_SPACE);
     if (looksLikeSpace(legacy)) return Hub.single(legacy);
   }
@@ -156,6 +159,35 @@ program
     console.log(
       `seeded ${target.slug}: ${counts.projects} project, ${counts.issues} issues, ${counts.docs} docs, ${counts.artifacts} artifact`,
     );
+  });
+
+const clients = program.command('clients').description('OAuth clients connected to this wake');
+
+clients
+  .command('list', { isDefault: true })
+  .description('list connected clients')
+  .action(() => {
+    const home = resolveHome(program.opts().home);
+    const list = new OAuthProvider(home).listClients();
+    if (!list.length) {
+      console.log('no clients yet — added when you authorize wake as a connector');
+      return;
+    }
+    for (const c of list) {
+      console.log(`${c.client_id}  ${c.client_name.padEnd(24)} added ${c.created.slice(0, 10)}`);
+    }
+  });
+
+clients
+  .command('revoke')
+  .description('revoke a client and every token it holds')
+  .argument('<client-id>')
+  .action((clientId: string) => {
+    const home = resolveHome(program.opts().home);
+    const provider = new OAuthProvider(home);
+    if (!provider.getClient(clientId)) throw new Error(`no client '${clientId}' — try \`wake clients\``);
+    const removed = provider.revokeClient(clientId);
+    console.log(`revoked ${clientId} (${removed} token${removed === 1 ? '' : 's'} dropped)`);
   });
 
 program

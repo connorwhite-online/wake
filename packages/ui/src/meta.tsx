@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { api, type MePayload, type SpaceSummary, type UserProfile } from './api';
 
 export interface StateStyle {
@@ -45,20 +45,34 @@ interface Account {
   user: UserProfile | null;
   spaces: SpaceSummary[];
   loading: boolean;
+  reload: () => Promise<void>;
 }
 
-const AccountContext = createContext<Account>({ user: null, spaces: [], loading: true });
+const AccountContext = createContext<Account>({
+  user: null,
+  spaces: [],
+  loading: true,
+  reload: async () => {},
+});
 
-/** Who you are and which spaces you can reach — loaded once for the session. */
+/** Who you are and which spaces you can reach. */
 export function AccountProvider({ children }: { children: React.ReactNode }) {
-  const [account, setAccount] = useState<Account>({ user: null, spaces: [], loading: true });
-  useEffect(() => {
-    api
-      .me()
-      .then((me: MePayload) => setAccount({ user: me.user, spaces: me.spaces, loading: false }))
-      .catch(() => setAccount({ user: null, spaces: [], loading: false }));
+  const [state, setState] = useState<Omit<Account, 'reload'>>({ user: null, spaces: [], loading: true });
+
+  const reload = useCallback(async () => {
+    try {
+      const me: MePayload = await api.me();
+      setState({ user: me.user, spaces: me.spaces, loading: false });
+    } catch {
+      setState((s) => ({ ...s, loading: false }));
+    }
   }, []);
-  return <AccountContext.Provider value={account}>{children}</AccountContext.Provider>;
+
+  useEffect(() => {
+    void reload();
+  }, [reload]);
+
+  return <AccountContext.Provider value={{ ...state, reload }}>{children}</AccountContext.Provider>;
 }
 
 export function useAccount(): Account {
