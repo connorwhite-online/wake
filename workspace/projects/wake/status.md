@@ -1,14 +1,14 @@
 ---
 derived: true
 project: 01KZAZE9Y5AGJNDAC3KPSNKGPE
-generated: 2026-08-07T03:26:17.791Z
+generated: 2026-08-07T04:38:16.549Z
 generated_by: claude-code
-rollup_hash: 3087648e
+rollup_hash: 937672fe
 ---
 
 ## Summary
 
-Spaces landed, which was the structural fix: a profile, many spaces, many projects each. On top of that the reading UI got charts computed live from the index, a narrative activity feed, and space management that no longer needs a terminal. Wake also became reachable as a Claude connector via OAuth, and learned to introduce itself — a cold agent in an unrelated repo now files its work here without being told to. Threads is the next real feature; the UI narrative pass is still in review.
+Wake can now be installed once per machine rather than wired up per repo: user-scope MCP, a memory block and a skill. Getting there produced the sharper finding — a skill alone never fires for work an agent was not already looking for, so the always-in-context block is what actually changes behaviour. Repeat trials then exposed the next real gap: repos map to spaces but not to projects, so an agent still guesses which project its work belongs in, and guesses wrong about a third of the time. That mapping is the next thing to build.
 
 ## Now
 
@@ -16,7 +16,9 @@ Spaces landed, which was the structural fix: a profile, many spaces, many projec
 
 ## Recently done
 
-- A stale WAKE_SPACE pinned the deployment to a directory-named space — updated 2026-08-07
+- A skill alone does not make an agent track work — updated 2026-08-07
+- wake install: reach every session on this machine — updated 2026-08-07
+- The image baked in WAKE_SPACE, pinning the deploy to a directory-named space — updated 2026-08-07
 - Every orb rendered the same hue — updated 2026-08-07
 - Spaces could only be created from the CLI — updated 2026-08-07
 - OAuth 2.1 so wake can be a Claude custom Connector — updated 2026-08-07
@@ -35,8 +37,8 @@ Spaces landed, which was the structural fix: a profile, many spaces, many projec
 
 | state | count |
 |---|---|
-| done | 14 |
+| done | 16 |
 | in-progress | 1 |
-| todo | 1 |
+| todo | 2 |
 | triage | 1 |
-| **total** | **17** |
+| **total** | **20** |
