@@ -28,6 +28,10 @@ describe('wake connect', () => {
     expect(claude).toContain('search');
     expect(claude).toContain('regenerate_status');
     expect(claude).toContain('wake://conventions');
+    // unset env vars make the server vanish silently — the block is the only
+    // place an agent can learn that absent tools mean misconfiguration
+    expect(claude).toContain('WAKE_URL');
+    expect(claude).toContain('WAKE_TOKEN');
   });
 
   it('scopes the endpoint to one space when asked', () => {

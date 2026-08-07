@@ -1,14 +1,14 @@
 ---
 derived: true
 project: 01KZAZE9Y5AGJNDAC3KPSNKGPE
-generated: 2026-08-07T04:38:16.549Z
+generated: 2026-08-07T04:44:59.735Z
 generated_by: claude-code
-rollup_hash: 937672fe
+rollup_hash: 17bb18eb
 ---
 
 ## Summary
 
-Wake can now be installed once per machine rather than wired up per repo: user-scope MCP, a memory block and a skill. Getting there produced the sharper finding — a skill alone never fires for work an agent was not already looking for, so the always-in-context block is what actually changes behaviour. Repeat trials then exposed the next real gap: repos map to spaces but not to projects, so an agent still guesses which project its work belongs in, and guesses wrong about a third of the time. That mapping is the next thing to build.
+Reaching wake from a cloud session turned out to need nothing built: a committed .mcp.json plus two environment variables, with wake install being a local-machine tool that ephemeral containers cannot use. What the investigation did surface was a silent failure — an unset WAKE_URL drops the server with no signal, so an agent cannot distinguish misconfiguration from absence — and the fact that wake's own repo was missing the CLAUDE.md half entirely. Both fixed. The open thread is still project selection: repos map to spaces but not to projects.
 
 ## Now
 
@@ -16,6 +16,8 @@ Wake can now be installed once per machine rather than wired up per repo: user-s
 
 ## Recently done
 
+- Wake's own repo had no CLAUDE.md — updated 2026-08-07
+- Unset WAKE_URL makes wake vanish with no trace — updated 2026-08-07
 - A skill alone does not make an agent track work — updated 2026-08-07
 - wake install: reach every session on this machine — updated 2026-08-07
 - The image baked in WAKE_SPACE, pinning the deploy to a directory-named space — updated 2026-08-07
@@ -37,8 +39,8 @@ Wake can now be installed once per machine rather than wired up per repo: user-s
 
 | state | count |
 |---|---|
-| done | 16 |
+| done | 18 |
 | in-progress | 1 |
 | todo | 2 |
 | triage | 1 |
-| **total** | **20** |
+| **total** | **22** |

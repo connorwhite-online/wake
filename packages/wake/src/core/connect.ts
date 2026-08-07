@@ -83,6 +83,11 @@ export function claudeMdBlock(space: string | undefined, spaceName: string | und
     '- **Close the loop** with `regenerate_status` when the project picture moved.',
     '',
     'Read the `wake://conventions` resource for the full contract.',
+    '',
+    'If the `wake` tools are **not** available in this session, `WAKE_URL` and',
+    '`WAKE_TOKEN` are unset in this environment — a cloud session gets them from',
+    'its environment config, not from the repo. Say so instead of carrying on',
+    'quietly, or the work goes unrecorded and nobody finds out until later.',
     END,
   ].join('\n');
 }
