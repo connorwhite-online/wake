@@ -151,12 +151,15 @@ service_documentation: 'https://github.com/connorwhite-online/wake',
 
   // RFC 7591 — dynamic client registration
   app.post('/oauth/register', async (c) => {
-    const body = (await c.req.json().catch(() => null)) as { redirect_uris?: unknown; client_name?: string } | null;
+    const body = (await c.req.json().catch(() => null)) as
+      | { redirect_uris?: unknown; client_name?: string; token_endpoint_auth_method?: unknown }
+      | null;
     if (!body) return c.json({ error: 'invalid_client_metadata', error_description: 'body must be JSON' }, 400);
     try {
       const client = provider.registerClient({
         client_name: body.client_name,
         redirect_uris: body.redirect_uris,
+        token_endpoint_auth_method: body.token_endpoint_auth_method,
       });
       return c.json(
         {
@@ -164,7 +167,8 @@ service_documentation: 'https://github.com/connorwhite-online/wake',
           client_secret: client.client_secret,
           client_name: client.client_name,
           redirect_uris: client.redirect_uris,
-          token_endpoint_auth_method: 'client_secret_post',
+          // report what the client actually got, not what we prefer
+          token_endpoint_auth_method: client.client_secret ? 'client_secret_post' : 'none',
           grant_types: ['authorization_code', 'refresh_token'],
           response_types: ['code'],
         },
