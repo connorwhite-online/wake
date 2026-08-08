@@ -1,0 +1,2 @@
+{"ts":"2026-08-08T06:35:52.089Z","actor":"claude-code","node":"01KZG1BJCQKST8AHE45AFW0FMQ","kind":"created","payload":{"type":"issue","title":"Refuse to serve open on a non-loopback bind","state":"todo"}}
+{"ts":"2026-08-08T06:35:52.098Z","actor":"claude-code","node":"01KZG1BJCQKST8AHE45AFW0FMQ","kind":"note","payload":{"text":"Follows directly from the exposure above: the fix for the instance is a variable, but the fix for the product is refusing to be quietly reachable."}}
