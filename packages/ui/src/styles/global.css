@@ -487,6 +487,9 @@ span.wiki-broken {
   opacity: 0.7;
 }
 .section-label .count { font-weight: 400; letter-spacing: 0; }
+/* a page shouldn't open with a dead gap */
+.content-inner > .section-label:first-child,
+.content-inner > div:first-child > .section-label:first-child { margin-top: 0.35rem; }
 
 .card, .status-card {
   background: var(--card);
@@ -631,44 +634,54 @@ li:hover > .orb, .card-link:hover .orb { transform: scale(1.15); }
   .result-row:hover + .result-row { border-top-color: transparent; }
 }
 
-.timeline { list-style: none; margin: 0; padding: 0; }
-.timeline li {
-  display: grid; grid-template-columns: auto 1fr auto; gap: 0.2rem 0.65rem;
-  align-items: baseline;
-  padding: 0.6rem 0.2rem;
+/* the feed: days → beats → lines */
+.feed { display: flex; flex-direction: column; }
+.feed-day + .feed-day { margin-top: 1.4rem; }
+.feed-day-label {
+  font-size: 0.7rem; font-weight: 650; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--ink-faint); margin-bottom: 0.5rem;
+}
+.feed-seen {
+  display: flex; align-items: center; gap: 0.6rem;
+  margin: 0.9rem 0 0.7rem;
+  font-size: 0.7rem; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.feed-seen::before, .feed-seen::after {
+  content: ''; flex: 1; height: 1px; background: var(--rule);
+}
+
+.beat {
+  display: flex; gap: 0.65rem;
+  padding: 0.55rem 0;
   animation: rise-in 0.3s var(--ease-out) both;
   animation-delay: calc(var(--i, 0) * 24ms);
 }
-.timeline li + li { border-top: 1px solid var(--rule); }
-.timeline .orb { align-self: center; }
-.timeline .what { font-size: 0.9rem; color: var(--ink); min-width: 0; }
-.timeline .what .actor { font-weight: 600; }
-.timeline .what .on-node { color: var(--ink-soft); }
-.timeline .when { color: var(--ink-faint); font-size: 0.77rem; white-space: nowrap; }
-.timeline .summary { grid-column: 2 / -1; color: var(--ink-soft); font-size: 0.86rem; }
+.beat + .beat { border-top: 1px solid var(--rule); }
+.beat .orb { margin-top: 0.15rem; }
+.beat-body { flex: 1; min-width: 0; }
+.beat-head { display: flex; align-items: baseline; gap: 0.65rem; }
+.beat-title {
+  flex: 1; min-width: 0;
+  font-size: 0.94rem; font-weight: 600; color: var(--ink);
+  /* the subject of the story is worth two lines before it gets cut */
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+a.beat-title:hover { color: var(--accent); text-decoration: none; }
+.beat-head .when { color: var(--ink-faint); font-size: 0.76rem; white-space: nowrap; flex-shrink: 0; }
+.beat-line {
+  color: var(--ink-soft); font-size: 0.87rem; line-height: 1.45;
+  margin-top: 0.15rem;
+}
 
 /* ---------- charts: the numbers as pictures ---------- */
 
 .rollup { display: flex; flex-direction: column; gap: 0.85rem; margin-top: 1rem; }
 .rollup.compact { gap: 0.55rem; margin-top: 0.75rem; }
-
-.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(5rem, 1fr)); gap: 0.5rem; }
-.tile {
-  padding: 0.55rem 0.7rem;
-  border-radius: var(--r-md);
-  background: var(--bg);
-  box-shadow: var(--chip-inset);
-}
-.tile.toned {
-  background: oklch(0.95 calc(var(--sc) * 0.3) var(--sh));
-  color: oklch(0.38 var(--sc) var(--sh));
-}
-@media (prefers-color-scheme: dark) {
-  .tile.toned { background: oklch(0.31 calc(var(--sc) * 0.4) var(--sh)); color: oklch(0.87 calc(var(--sc) * 0.7) var(--sh)); }
-}
-.tile-value { font-size: 1.35rem; font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums; }
-.tile-label { font-size: 0.72rem; color: var(--ink-faint); margin-top: 0.1rem; white-space: nowrap; }
-.tile.toned .tile-label { color: inherit; opacity: 0.75; }
+.rollup-lead { font-size: 0.95rem; color: var(--ink-soft); }
+.rollup-lead strong { font-size: 1.35rem; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
+.rollup-of { color: var(--ink-faint); }
 
 .statebar-wrap { display: flex; flex-direction: column; gap: 0.5rem; }
 .statebar {
@@ -811,6 +824,4 @@ li:hover > .orb, .card-link:hover .orb { transform: scale(1.15); }
   .issue-row { min-height: 44px; }
   .issue-row .row-meta .tag-list { display: none; }
 
-  .tiles { grid-template-columns: repeat(3, 1fr); }
-  .tile-value { font-size: 1.2rem; }
 }

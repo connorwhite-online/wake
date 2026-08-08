@@ -1,0 +1,2 @@
+{"ts":"2026-08-07T03:26:17.724Z","actor":"claude-code","node":"01KZD43QKTSYBBVRN5AW989HHT","kind":"created","payload":{"type":"issue","title":"Every orb rendered the same hue","state":"in-progress"}}
+{"ts":"2026-08-07T03:26:17.729Z","actor":"claude-code","node":"01KZD43QKTSYBBVRN5AW989HHT","kind":"state_changed","payload":{"from":"in-progress","to":"done","reason":"Fixed. Actors and spaces are finally distinguishable at a glance, which was the whole point of the orbs."}}

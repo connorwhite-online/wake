@@ -25,6 +25,17 @@ export interface ConnectResult {
   wroteClaudeMd: boolean;
 }
 
+/** The endpoint an agent talks to: the whole account, or one space. */
+export function mcpEndpoint(url: string, space?: string, scoped?: boolean): string {
+  const base = url.replace(/\/+$/, '');
+  return scoped && space ? `${base}/s/${space}/mcp` : `${base}/mcp`;
+}
+
+/** The .mcp.json / claude-mcp entry for a wake endpoint. Shared by connect and install. */
+export function mcpServerEntry(endpoint: string): Record<string, unknown> {
+  return { type: 'http', url: endpoint, headers: { Authorization: 'Bearer ${WAKE_TOKEN}' } };
+}
+
 /** Identify a repo the way a person would: its origin remote, else its folder. */
 export function repoIdentity(dir: string): string | null {
   try {
@@ -72,6 +83,11 @@ export function claudeMdBlock(space: string | undefined, spaceName: string | und
     '- **Close the loop** with `regenerate_status` when the project picture moved.',
     '',
     'Read the `wake://conventions` resource for the full contract.',
+    '',
+    'If the `wake` tools are **not** available in this session, `WAKE_URL` and',
+    '`WAKE_TOKEN` are unset in this environment — a cloud session gets them from',
+    'its environment config, not from the repo. Say so instead of carrying on',
+    'quietly, or the work goes unrecorded and nobody finds out until later.',
     END,
   ].join('\n');
 }
@@ -87,17 +103,13 @@ function upsertMcpJson(file: string, endpoint: string): boolean {
     }
   }
   config.mcpServers ??= {};
-  config.mcpServers.wake = {
-    type: 'http',
-    url: endpoint,
-    headers: { Authorization: 'Bearer ${WAKE_TOKEN}' },
-  };
+  config.mcpServers.wake = mcpServerEntry(endpoint);
   fs.writeFileSync(file, JSON.stringify(config, null, 2) + '\n');
   return true;
 }
 
-/** Replace the wake block in CLAUDE.md, or append one. */
-function upsertClaudeMd(file: string, block: string): boolean {
+/** Replace the wake block in a CLAUDE.md, or append one. Shared by connect and install. */
+export function upsertClaudeMd(file: string, block: string): boolean {
   const existing = fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : '';
   if (existing.includes(BEGIN) && existing.includes(END)) {
     const start = existing.indexOf(BEGIN);
@@ -120,8 +132,7 @@ function upsertClaudeMd(file: string, block: string): boolean {
 export function connectRepo(opts: ConnectOptions): ConnectResult {
   const dir = path.resolve(opts.repoDir);
   if (!fs.existsSync(dir)) throw new Error(`no such directory: ${dir}`);
-  const base = opts.url.replace(/\/+$/, '');
-  const endpoint = opts.scoped && opts.space ? `${base}/s/${opts.space}/mcp` : `${base}/mcp`;
+  const endpoint = mcpEndpoint(opts.url, opts.space, opts.scoped);
 
   return {
     endpoint,

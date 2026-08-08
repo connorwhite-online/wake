@@ -60,7 +60,6 @@ export function StateBar({ counts, legend = true }: { counts: Record<string, num
 export function Sparkline({ days, height = 34 }: { days: { day: string; count: number }[]; height?: number }) {
   if (!days.length) return null;
   const max = Math.max(...days.map((d) => d.count), 1);
-  const busiest = days.reduce((a, b) => (b.count > a.count ? b : a));
   return (
     <div className="spark" style={{ height }} role="img" aria-label={`activity over ${days.length} days`}>
       {days.map((d) => (
@@ -72,41 +71,29 @@ export function Sparkline({ days, height = 34 }: { days: { day: string; count: n
         />
       ))}
       <span className="spark-caption">
-        {days.reduce((n, d) => n + d.count, 0)} events · busiest {busiest.count}
+        {days.reduce((n, d) => n + d.count, 0)} events · {days.length} days
       </span>
     </div>
   );
 }
 
-export function StatTile({ label, value, tone }: { label: string; value: number | string; tone?: string }) {
-  const style = useStateStyle(tone ?? null);
-  return (
-    <div
-      className={`tile${style ? ' toned' : ''}`}
-      style={style ? { ['--sh' as string]: style.hue, ['--sc' as string]: style.chroma } : undefined}
-    >
-      <div className="tile-value">{value}</div>
-      <div className="tile-label">{label}</div>
-    </div>
-  );
-}
-
-/** The whole rollup as one glanceable block: tiles, bar, sparkline. */
+/**
+ * The rollup as one glanceable block. Deliberately three layers and no more:
+ * a headline count, the distribution as a bar its legend decodes, and the
+ * shape of recent effort. Blocked and stale get named callouts elsewhere, so
+ * repeating their numbers here would be the third telling.
+ */
 export function RollupPanel({ rollup, compact = false }: { rollup: Rollup; compact?: boolean }) {
   const open = rollup.total - (rollup.counts.done ?? 0) - (rollup.counts.dropped ?? 0);
   return (
     <div className={`rollup${compact ? ' compact' : ''}`}>
       {!compact && (
-        <div className="tiles">
-          <StatTile label="open" value={open} />
-          <StatTile label="in progress" value={rollup.now.length} tone="in-progress" />
-          {rollup.blocked.length > 0 && <StatTile label="blocked" value={rollup.blocked.length} tone="blocked" />}
-          {rollup.stale.length > 0 && <StatTile label="stale" value={rollup.stale.length} tone="triage" />}
-          <StatTile label="done" value={rollup.counts.done ?? 0} tone="done" />
+        <div className="rollup-lead">
+          <strong>{open}</strong> open <span className="rollup-of">of {rollup.total}</span>
         </div>
       )}
       <StateBar counts={rollup.counts} legend={!compact} />
-      <Sparkline days={rollup.activity_by_day} height={compact ? 26 : 34} />
+      <Sparkline days={rollup.activity_by_day} height={compact ? 26 : 32} />
     </div>
   );
 }

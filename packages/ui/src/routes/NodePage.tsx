@@ -72,7 +72,7 @@ export default function NodePage() {
       )}
 
       <h2 className="section-label">history</h2>
-      <Timeline rows={activity} />
+      <Timeline rows={activity} of={node.id} />
     </div>
   );
 }

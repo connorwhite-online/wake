@@ -1,3 +1,6 @@
 {"ts":"2026-08-06T07:26:12.429Z","actor":"connor","node":"01KZAZE9Y5AGJNDAC3KPSNKGPE","kind":"created","payload":{"type":"project","title":"Wake"}}
 {"ts":"2026-08-06T07:26:12.472Z","actor":"claude-code","node":"01KZAZE9Y5AGJNDAC3KPSNKGPE","kind":"linked","payload":{"from":"01KZAZE9ZN1EK3ZZTNE71B6XGK","type":"documents","direction":"in"}}
 {"ts":"2026-08-06T07:26:12.474Z","actor":"claude-code","node":"01KZAZE9Y5AGJNDAC3KPSNKGPE","kind":"note","payload":{"text":"Friction-log sweep complete: all seven actionable findings from the cold-agent test fixed or resolved-by-decision in one pass."}}
+{"ts":"2026-08-07T03:26:17.792Z","actor":"claude-code","node":"01KZAZE9Y5AGJNDAC3KPSNKGPE","kind":"status_regenerated","payload":{"hash":"3087648e"}}
+{"ts":"2026-08-07T04:38:16.550Z","actor":"claude-code","node":"01KZAZE9Y5AGJNDAC3KPSNKGPE","kind":"status_regenerated","payload":{"hash":"937672fe"}}
+{"ts":"2026-08-07T04:44:59.736Z","actor":"claude-code","node":"01KZAZE9Y5AGJNDAC3KPSNKGPE","kind":"status_regenerated","payload":{"hash":"17bb18eb"}}

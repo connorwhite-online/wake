@@ -1,0 +1,2 @@
+{"ts":"2026-08-07T03:26:17.753Z","actor":"claude-code","node":"01KZD43QMQ5CKYQSAM1344Z49C","kind":"created","payload":{"type":"issue","title":"Narrative pass: one row language, no duplicate counts","state":"in-progress"}}
+{"ts":"2026-08-07T03:26:17.760Z","actor":"claude-code","node":"01KZD43QMQ5CKYQSAM1344Z49C","kind":"note","payload":{"text":"Open in review as PR #11. The principle: give each fact exactly one owner."}}

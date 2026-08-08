@@ -6,6 +6,7 @@ import { openDb } from './core/db.js';
 import { dbPath } from './core/config.js';
 import { fullReindex, catchUp } from './core/indexer.js';
 import { connectRepo } from './core/connect.js';
+import { install } from './core/install.js';
 import { OAuthProvider } from './core/oauth.js';
 import {
   Hub,
@@ -232,6 +233,41 @@ program
       console.log('\nset WAKE_TOKEN in the environment where agents run.');
     }
     console.log('commit both files so every session on this repo picks them up.');
+  });
+
+program
+  .command('install')
+  .description('make wake reachable from every session on this machine: user-scope MCP, a memory block and a skill')
+  .option('--url <url>', 'wake deployment base URL (default: $WAKE_URL)')
+  .option('--space <slug>', 'pin this machine to one space instead of your whole account')
+  .option('--skill-only', 'write the skill and memory block but leave MCP registration to you')
+  .action((opts: { url?: string; space?: string; skillOnly?: boolean }) => {
+    const asked = opts.space ?? program.opts<{ space?: string }>().space;
+    const url = opts.url ?? process.env.WAKE_URL;
+    if (!url && !opts.skillOnly) {
+      throw new Error('need the deployment URL — pass --url https://… or set WAKE_URL');
+    }
+    if (asked) {
+      const hub = openHub();
+      const known = hub.info(asked);
+      hub.closeAll();
+      if (!known) throw new Error(`no space '${asked}' — try \`wake spaces\``);
+    }
+
+    const result = install({ url: url ?? '${WAKE_URL}', space: asked, skillOnly: opts.skillOnly });
+    console.log(`wrote memory    → ${result.memoryPath}`);
+    console.log(`wrote skill     → ${result.skillPath}`);
+    if (opts.skillOnly) {
+      console.log('\nskipped MCP registration, as asked.');
+      return;
+    }
+    if (result.registered === 'claude-cli') {
+      console.log(`registered wake → ${result.endpoint} (user scope)`);
+    } else {
+      console.log(`\ncouldn't run the claude CLI — register it yourself with:\n\n  ${result.command}\n`);
+    }
+    console.log('\nset WAKE_TOKEN in your shell profile so sessions can authenticate.');
+    console.log('every repo you open on this machine can now reach wake.');
   });
 
 program

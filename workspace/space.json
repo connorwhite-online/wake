@@ -1,0 +1,7 @@
+{
+  "name": "Wake",
+  "description": "Building wake, in wake.",
+  "repos": [
+    "github.com/connorwhite-online/wake"
+  ]
+}
