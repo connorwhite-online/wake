@@ -11,6 +11,8 @@ import { renderMarkdown, nodeUrl } from '../core/markdown.js';
 import { computeRollup } from '../core/rollup.js';
 import { loadSettings } from '../core/settings.js';
 import { rowToSummary, type NodeSummary } from '../core/search.js';
+import { applyFiles, type TransferFile } from '../core/transfer.js';
+import { catchUp } from '../core/indexer.js';
 
 function issueCounts(ws: Workspace, projectId: string): Record<string, number> {
   return Object.fromEntries(
@@ -164,6 +166,34 @@ export function buildApi(hub: Hub, bus: EventEmitter, opts: ApiOptions = {}): Ho
     info.name = updated.name;
     info.description = updated.description;
     return c.json({ space: spaceSummary(hub, info) });
+  });
+
+  /**
+   * Import a space's files from another instance.
+   *
+   * The repo's committed workspace/ and a deployment's volume are two copies
+   * that otherwise never reconcile: the container seeds from the image only
+   * when the volume is empty, and git sync is one-way out. This is the inbound
+   * path — additive by default, so it can never quietly overwrite the copy
+   * someone has been reading.
+   */
+  app.post('/api/spaces/:slug/import', async (c) => {
+    if (!opts.canCreateSpaces) return c.json({ error: 'this token cannot import' }, 403);
+    const info = hub.info(c.req.param('slug'));
+    if (!info) return c.json({ error: 'no such space' }, 404);
+    const body = (await c.req.json().catch(() => null)) as
+      | { files?: TransferFile[]; overwrite?: boolean }
+      | null;
+    if (!Array.isArray(body?.files)) return c.json({ error: 'files[] is required' }, 400);
+    if (body.files.some((f) => typeof f?.path !== 'string' || typeof f?.content !== 'string')) {
+      return c.json({ error: 'each file needs a string path and content' }, 400);
+    }
+
+    const result = applyFiles(info.path, body.files, body.overwrite === true);
+    const ws = hub.workspace(info.slug);
+    catchUp(info.path, ws.db);
+    bus.emit('change', { space: info.slug });
+    return c.json(result);
   });
 
   app.get('/api/s/:space/meta', (c) => {

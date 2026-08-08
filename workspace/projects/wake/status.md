@@ -1,14 +1,14 @@
 ---
 derived: true
 project: 01KZAZE9Y5AGJNDAC3KPSNKGPE
-generated: 2026-08-07T04:44:59.735Z
+generated: 2026-08-08T04:32:15.546Z
 generated_by: claude-code
-rollup_hash: 17bb18eb
+rollup_hash: 495f5bbb
 ---
 
 ## Summary
 
-Reaching wake from a cloud session turned out to need nothing built: a committed .mcp.json plus two environment variables, with wake install being a local-machine tool that ephemeral containers cannot use. What the investigation did surface was a silent failure — an unset WAKE_URL drops the server with no signal, so an agent cannot distinguish misconfiguration from absence — and the fact that wake's own repo was missing the CLAUDE.md half entirely. Both fixed. The open thread is still project selection: repos map to spaces but not to projects.
+The record and the thing you read had drifted apart: sessions were writing into the repo's committed workspace while the deployment served its own volume, with no path between them and no signal that anything was wrong. `wake push` is that path — file-level, merge-safe, verified instance-to-instance. Two open threads remain, both about an agent guessing where work belongs: repos map to spaces but not to projects, and nothing yet keeps a deployment and the repo copy in step automatically.
 
 ## Now
 
@@ -16,6 +16,8 @@ Reaching wake from a cloud session turned out to need nothing built: a committed
 
 ## Recently done
 
+- The repo copy and the deployment never reconciled — updated 2026-08-08
+- wake push: send a local space into a running instance — updated 2026-08-08
 - Wake's own repo had no CLAUDE.md — updated 2026-08-07
 - Unset WAKE_URL makes wake vanish with no trace — updated 2026-08-07
 - A skill alone does not make an agent track work — updated 2026-08-07
@@ -39,8 +41,8 @@ Reaching wake from a cloud session turned out to need nothing built: a committed
 
 | state | count |
 |---|---|
-| done | 18 |
+| done | 20 |
 | in-progress | 1 |
 | todo | 2 |
 | triage | 1 |
-| **total** | **22** |
+| **total** | **24** |
