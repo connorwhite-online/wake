@@ -7,6 +7,7 @@ import { dbPath } from './core/config.js';
 import { fullReindex, catchUp } from './core/indexer.js';
 import { connectRepo } from './core/connect.js';
 import { install } from './core/install.js';
+import { collectSpaceFiles } from './core/transfer.js';
 import { OAuthProvider } from './core/oauth.js';
 import {
   Hub,
@@ -268,6 +269,49 @@ program
     }
     console.log('\nset WAKE_TOKEN in your shell profile so sessions can authenticate.');
     console.log('every repo you open on this machine can now reach wake.');
+  });
+
+program
+  .command('push')
+  .description('send a local space into a remote wake (e.g. the repo\'s workspace/ into your deployment)')
+  .option('--url <url>', 'remote wake base URL (default: $WAKE_URL)')
+  .option('--token <token>', 'full-access token for the remote (default: $WAKE_TOKEN)')
+  .option('--to <slug>', 'space slug on the remote; defaults to the local slug')
+  .option('--overwrite', 'replace files that already exist on the remote')
+  .option('--dry-run', 'list what would be sent and stop')
+  .action(async (opts: { url?: string; token?: string; to?: string; overwrite?: boolean; dryRun?: boolean }) => {
+    const hub = openHub();
+    const { slug, dir } = pickSpace(hub);
+    hub.closeAll();
+
+    const files = collectSpaceFiles(dir);
+    if (opts.dryRun) {
+      for (const f of files) console.log(`  ${f.path}`);
+      console.log(`\n${files.length} file${files.length === 1 ? '' : 's'} from '${slug}' — nothing sent (--dry-run)`);
+      return;
+    }
+
+    const url = (opts.url ?? process.env.WAKE_URL)?.replace(/\/+$/, '');
+    const token = opts.token ?? process.env.WAKE_TOKEN;
+    if (!url) throw new Error('need the remote URL — pass --url https://… or set WAKE_URL');
+    if (!token) throw new Error('need a full-access token — pass --token or set WAKE_TOKEN');
+
+    const target = opts.to ?? slug;
+    const res = await fetch(`${url}/api/spaces/${encodeURIComponent(target)}/import`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+      body: JSON.stringify({ files, overwrite: Boolean(opts.overwrite) }),
+    });
+    const text = await res.text();
+    if (!res.ok) throw new Error(`remote said ${res.status}: ${text.slice(0, 300)}`);
+    const result = JSON.parse(text) as { written: string[]; skipped: string[]; rejected: string[] };
+
+    console.log(`${slug} → ${url}/s/${target}`);
+    console.log(`  ${result.written.length} written, ${result.skipped.length} already there`);
+    if (result.rejected.length) console.log(`  ${result.rejected.length} rejected: ${result.rejected.join(', ')}`);
+    if (!opts.overwrite && result.skipped.length) {
+      console.log('\nexisting files were left alone; pass --overwrite to replace them.');
+    }
   });
 
 program
