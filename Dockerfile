@@ -1,5 +1,6 @@
 # wake — writable cloud deployment: MCP (streamable http) + reading UI + API
-# in one process, workspace on a persistent volume at /data/workspace.
+# in one process. Spaces live on a persistent volume at /data/spaces/<slug>;
+# the repo's workspace/ is only seed data for an empty volume, never read again.
 FROM node:22-slim
 
 RUN apt-get update && apt-get install -y --no-install-recommends git ca-certificates \
