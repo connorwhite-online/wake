@@ -2,7 +2,7 @@
 id: 01KZFVH7KGMGS25NGJB33RJG4T
 title: Reaching wake from a cloud session
 created: '2026-08-08T04:54:06.192Z'
-updated: '2026-08-08T04:54:06.192Z'
+updated: '2026-08-08T04:56:52.988Z'
 author: claude-code
 tags: []
 links: []
@@ -15,45 +15,77 @@ Three things gate a cloud agent's access to a wake deployment. Miss any one
 and the tools are simply absent, with nothing said about why — which is what
 made this take several sessions to notice.
 
+## Where the settings actually are
+
+**There is no settings page.** The docs say so outright: "There's no settings
+page or direct URL for the selector." Anything describing one is describing
+something that does not exist, which is a trap worth naming because the
+plausible-sounding wrong answer is easy to produce.
+
+At [claude.ai/code](https://claude.ai/code), the control is the **cloud icon
+showing the current environment's name, in the row above the message box** —
+the composer row, not a menu. Hover an environment there for a gear icon, or
+choose **Add cloud environment**.
+
+The feature is called a **cloud environment**. Searching for "environment
+settings" finds nothing.
+
 ## 1. Network egress
 
-The deployment host must be on the environment's egress allowlist. Without it
-the proxy answers 403 to CONNECT and every request fails before TLS:
+In the environment dialog, **Network access** takes one of four levels:
+`None`, `Trusted`, `Full`, `Custom`. A deployment on your own domain is not
+in the Trusted list, so choose **Custom** and add the host to **Allowed
+domains**, one per line:
+
+```
+wake.example.app
+```
+
+Tick **"Also include default list of common package managers"** unless you
+want to lose npm, GitHub raw and the rest.
+
+Without this the proxy answers 403 to CONNECT and every request fails before
+TLS, long before a credential would matter:
 
 ```
 remote said 403: Host not in allowlist: <host>.
 Add this host to your network egress settings to allow access.
 ```
 
-This one is invisible from inside the session until something actually tries
-to connect. Do not route around it — it is an environment setting.
+Traffic from a **claude.ai connector** is fetched by Anthropic's servers
+rather than the session VM, so the OAuth connector route needs no allowlist
+entry at all. This applies to the session's own network: `wake push`, and an
+MCP server the session starts from `.mcp.json`.
 
 ## 2. WAKE_URL
 
-The **base** URL, not a page within it. `https://wake.example.app`, never
-`https://wake.example.app/s/<space>` — the `/s/<slug>` path is the reading UI
-for one space, and pasting it produces an endpoint of
-`…/s/<slug>/mcp` that means something different (a space-scoped connector).
+Set in the same dialog, in `.env` format, one `KEY=value` per line.
 
-Unset, Claude Code cannot expand `${WAKE_URL}` in .mcp.json, so the server
-entry is invalid and gets dropped **silently**. The agent has no way to tell
-"wake is not part of this project" from "wake is misconfigured here".
+Use the **base** URL, not a page within it. `https://wake.example.app`, never
+`https://wake.example.app/s/<space>` — the `/s/<slug>` path is the reading UI
+for one space, and pasting it yields a `…/s/<slug>/mcp` endpoint, which is a
+space-scoped connector rather than the account one. It half-works, which is
+worse than failing.
+
+Unset, Claude Code cannot expand `${WAKE_URL}` in .mcp.json, so the entry is
+invalid and gets dropped **silently**. An agent then cannot tell "wake is not
+part of this project" from "wake is misconfigured here".
 
 ## 3. WAKE_TOKEN
 
-The full-access token. A space-scoped `WAKE_TOKEN_<SLUG>` also works for
-reading and writing that space, but not for creating spaces or importing.
+The full-access token. A space-scoped `WAKE_TOKEN_<SLUG>` also reads and
+writes that space, but cannot create spaces or import.
 
-## Where these live
+**Note what you are trading.** Cloud environments have no secrets store, and
+the dialog warns against putting credentials in them: anyone who can use the
+environment can read the value. On a personal environment that is only you.
+If that is not acceptable, use the OAuth connector instead — consent issues a
+scoped grant, so no token is stored in environment config at all.
 
-Environment variables and network access are both **environment config**, not
-repo config — a cloud container is rebuilt per session, so nothing written to
-`~/.claude` survives and `wake install` has nothing to attach to. What the
-repo contributes is the committed `.mcp.json` and CLAUDE.md block from
-`wake connect`; those two plus the three settings above are the whole story.
+## Timing
 
-Changes to environment config apply at container start, so a session already
-running will not pick them up. Start a new one.
+Environment config is copied once at container start. A session already
+running keeps the values it started with, so changes need a new session.
 
 ## Checking it worked
 
@@ -62,5 +94,5 @@ wake push --dry-run          # lists files, contacts nothing
 wake push --to <slug>        # the real thing
 ```
 
-If the tools are present but you are unsure they point at the right instance,
-`list_spaces` returns the space slugs and the repos each one claims.
+`list_spaces` returns the space slugs and the repos each claims, which is the
+quickest way to confirm the tools point at the instance you meant.
