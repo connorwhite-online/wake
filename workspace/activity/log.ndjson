@@ -3,3 +3,4 @@
 {"ts":"2026-08-06T07:26:12.474Z","actor":"claude-code","node":"01KZAZE9ZN1EK3ZZTNE71B6XGK","kind":"linked","payload":{"to":"01KZAZE9YER3D845HJYJZ4VJM9","type":"documents","direction":"out"}}
 {"ts":"2026-08-07T03:26:17.768Z","actor":"claude-code","node":"01KZD43QN6KJ0664T8037N8G3W","kind":"created","payload":{"type":"doc","title":"ADR 003: Wake is its own authorization server"}}
 {"ts":"2026-08-07T03:26:17.774Z","actor":"claude-code","node":"01KZD43QNDZ9QPN261GM58BY9Q","kind":"created","payload":{"type":"doc","title":"Cold-agent testing"}}
+{"ts":"2026-08-08T04:54:06.206Z","actor":"claude-code","node":"01KZFVH7KGMGS25NGJB33RJG4T","kind":"created","payload":{"type":"doc","title":"Reaching wake from a cloud session"}}
