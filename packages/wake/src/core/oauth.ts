@@ -113,7 +113,21 @@ export class OAuthProvider {
 
   // ---------- clients (RFC 7591) ----------
 
-  registerClient(input: { client_name?: string; redirect_uris: unknown }): ClientRecord & { client_secret?: string } {
+  /**
+   * RFC 7591 dynamic registration.
+   *
+   * A client that asks for `token_endpoint_auth_method: "none"` is a public
+   * client — the shape an MCP connector takes, since it redirects through a
+   * browser and has nowhere to keep a secret. Honour that rather than issuing
+   * a secret anyway: PKCE already binds the code to the client, and a client
+   * hard-coded as public will not send a secret it never asked for, so forcing
+   * one is an interop failure with nothing gained.
+   */
+  registerClient(input: {
+    client_name?: string;
+    redirect_uris: unknown;
+    token_endpoint_auth_method?: unknown;
+  }): ClientRecord & { client_secret?: string } {
     const uris = Array.isArray(input.redirect_uris)
       ? input.redirect_uris.filter((u): u is string => typeof u === 'string')
       : [];
@@ -131,10 +145,11 @@ export class OAuthProvider {
         throw new Error(`redirect_uri must use https: ${uri}`);
       }
     }
-    const secret = token(24);
+    const isPublic = input.token_endpoint_auth_method === 'none';
+    const secret = isPublic ? undefined : token(24);
     const record: ClientRecord = {
       client_id: token(16),
-      client_secret_hash: sha256(secret),
+      client_secret_hash: secret ? sha256(secret) : undefined,
       client_name: typeof input.client_name === 'string' ? input.client_name.slice(0, 120) : 'unnamed client',
       redirect_uris: uris,
       created: new Date().toISOString(),

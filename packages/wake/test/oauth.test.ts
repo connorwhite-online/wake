@@ -67,6 +67,14 @@ async function authorize(
   return app.request('/oauth/authorize', { method: 'POST', body: form });
 }
 
+/** The authorization code out of the consent redirect. */
+function codeFrom(redirect: Response): string {
+  expect(redirect.status).toBe(302);
+  const code = new URL(redirect.headers.get('location')!).searchParams.get('code');
+  expect(code).toBeTruthy();
+  return code!;
+}
+
 async function exchange(
   app: ReturnType<typeof buildHttpApp>,
   client: { client_id: string; client_secret: string },
@@ -100,6 +108,67 @@ describe('oauth', () => {
     expect(asm.registration_endpoint).toBe('https://wake.example.com/oauth/register');
     // also served at the /mcp-suffixed paths some clients probe
     expect((await app.request('/.well-known/oauth-protected-resource/mcp')).status).toBe(200);
+  });
+
+  it('registers a public client without a secret when one asks to be public', async () => {
+    // An MCP connector redirects through a browser and has nowhere to keep a
+    // secret, so it registers with token_endpoint_auth_method "none". Issuing
+    // it a secret anyway means a client that never asked for one cannot
+    // authenticate at the token endpoint — an interop break with nothing
+    // gained, since PKCE already binds the code to the client.
+    const { app } = setup();
+    const res = await app.request('/oauth/register', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        client_name: 'Claude',
+        redirect_uris: [CALLBACK],
+        token_endpoint_auth_method: 'none',
+      }),
+    });
+    expect(res.status).toBe(201);
+    const client = (await res.json()) as { client_id: string; client_secret?: string; token_endpoint_auth_method: string };
+    expect(client.client_secret).toBeUndefined();
+    expect(client.token_endpoint_auth_method).toBe('none');
+
+    // and the whole flow completes with no secret anywhere
+    const { verifier, challenge } = pkce();
+    const code = codeFrom(await authorize(app, client, challenge, '*'));
+    const token = await app.request('/oauth/token', {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        grant_type: 'authorization_code',
+        code,
+        redirect_uri: CALLBACK,
+        client_id: client.client_id,
+        code_verifier: verifier,
+      }),
+    });
+    expect(token.status).toBe(200);
+    expect(((await token.json()) as { access_token?: string }).access_token).toBeTruthy();
+  });
+
+  it('still issues a secret to a client that does not ask to be public', async () => {
+    const { app } = setup();
+    const client = await register(app);
+    expect(client.client_secret).toBeTruthy();
+    // a confidential client that omits its secret is refused
+    const { verifier, challenge } = pkce();
+    const code = codeFrom(await authorize(app, client, challenge, '*'));
+    const res = await app.request('/oauth/token', {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        grant_type: 'authorization_code',
+        code,
+        redirect_uri: CALLBACK,
+        client_id: client.client_id,
+        code_verifier: verifier,
+      }),
+    });
+    expect(res.status).toBe(400);
+    expect(((await res.json()) as { error: string }).error).toBe('invalid_client');
   });
 
   it('points an unauthorized MCP request at the metadata (RFC 9728)', async () => {
