@@ -61,6 +61,44 @@ export function safeEqual(a: string, b: string): boolean {
   return crypto.timingSafeEqual(ha, hb);
 }
 
+/** Schemes a browser would execute rather than merely navigate to. */
+const UNSAFE_SCHEMES = new Set(['javascript:', 'data:', 'vbscript:', 'file:', 'blob:']);
+const LOOPBACK_HOSTS = ['localhost', '127.0.0.1', '[::1]'];
+
+/**
+ * RFC 8252 gives a native app two ways to catch the redirect: a loopback
+ * address (§7.3) and a private-use URI scheme it registers with the OS (§7.1 —
+ * `cursor://…`, `com.example.app:/cb`). An editor embedding an MCP client uses
+ * the second, so accepting only https and loopback turns a conforming client
+ * away at registration.
+ *
+ * What actually protects a private-use scheme is PKCE, not the scheme check:
+ * another app on the same machine can claim the same scheme and race for the
+ * redirect, which is why /authorize requires S256 unconditionally. So this only
+ * has to keep out URLs that would execute in the browser instead of navigating.
+ */
+export function assertUsableRedirect(uri: string): void {
+  let parsed: URL;
+  try {
+    parsed = new URL(uri);
+  } catch {
+    throw new Error(`invalid redirect_uri: ${uri}`);
+  }
+  if (UNSAFE_SCHEMES.has(parsed.protocol)) {
+    throw new Error(`redirect_uri may not use ${parsed.protocol} ${uri}`);
+  }
+  if (parsed.protocol === 'https:') return;
+  // plaintext http is for native loopback only, never a remote host
+  if (parsed.protocol === 'http:') {
+    if (LOOPBACK_HOSTS.includes(parsed.hostname)) return;
+    throw new Error(`redirect_uri must use https or loopback: ${uri}`);
+  }
+  // anything else is a private-use scheme; require it to be a well-formed one
+  if (!/^[a-z][a-z0-9+.-]*:$/.test(parsed.protocol)) {
+    throw new Error(`invalid redirect_uri scheme: ${uri}`);
+  }
+}
+
 export class OAuthProvider {
   private store: Store = { clients: {}, tokens: {}, refresh: {} };
   /** Authorization codes live in memory: 60s TTL, single use. */
@@ -132,19 +170,7 @@ export class OAuthProvider {
       ? input.redirect_uris.filter((u): u is string => typeof u === 'string')
       : [];
     if (!uris.length) throw new Error('redirect_uris is required');
-    for (const uri of uris) {
-      let parsed: URL;
-      try {
-        parsed = new URL(uri);
-      } catch {
-        throw new Error(`invalid redirect_uri: ${uri}`);
-      }
-      // loopback is allowed for native clients; everything else must be https
-      const loopback = ['localhost', '127.0.0.1', '[::1]'].includes(parsed.hostname);
-      if (parsed.protocol !== 'https:' && !loopback) {
-        throw new Error(`redirect_uri must use https: ${uri}`);
-      }
-    }
+    for (const uri of uris) assertUsableRedirect(uri);
     const isPublic = input.token_endpoint_auth_method === 'none';
     const secret = isPublic ? undefined : token(24);
     const record: ClientRecord = {

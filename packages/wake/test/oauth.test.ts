@@ -300,6 +300,66 @@ describe('oauth', () => {
     expect((await res.json()).error).toBe('invalid_client_metadata');
   });
 
+  // RFC 8252 §7.1: an editor's MCP client catches the redirect on a private-use
+  // scheme, not an https URL. Registering one used to 400, so the whole flow was
+  // unreachable from Cursor and anything else shaped like it.
+  it('registers a native client on a private-use scheme and authorizes it', async () => {
+    const { app } = setup();
+    const native = 'cursor://anysphere.cursor-mcp/oauth/callback';
+    const res = await app.request('/oauth/register', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        client_name: 'Cursor',
+        redirect_uris: [native],
+        token_endpoint_auth_method: 'none',
+      }),
+    });
+    expect(res.status).toBe(201);
+    const client = (await res.json()) as { client_id: string };
+
+    const { verifier, challenge } = pkce();
+    const query = new URLSearchParams({
+      response_type: 'code',
+      client_id: client.client_id,
+      redirect_uri: native,
+      code_challenge: challenge,
+      code_challenge_method: 'S256',
+    });
+    const form = new FormData();
+    for (const [k, v] of query) form.set(k, v);
+    form.set('owner_token', OWNER);
+    form.set('grant', '*');
+    const redirect = await app.request('/oauth/authorize', { method: 'POST', body: form });
+
+    // the consent redirect goes back out on the app's own scheme
+    expect(redirect.status).toBe(302);
+    expect(redirect.headers.get('location')).toMatch(/^cursor:\/\//);
+
+    // and the code it carries redeems for a working token
+    const token = new FormData();
+    token.set('grant_type', 'authorization_code');
+    token.set('code', codeFrom(redirect));
+    token.set('client_id', client.client_id);
+    token.set('redirect_uri', native);
+    token.set('code_verifier', verifier);
+    const granted = await app.request('/oauth/token', { method: 'POST', body: token });
+    expect(granted.status).toBe(200);
+    expect((await granted.json()).access_token).toBeTruthy();
+  });
+
+  it('still refuses redirects a browser would execute', async () => {
+    const { app } = setup();
+    for (const uri of ['javascript:alert(1)', 'data:text/html,x', 'file:///etc/passwd']) {
+      const res = await app.request('/oauth/register', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ client_name: 'x', redirect_uris: [uri] }),
+      });
+      expect(res.status, uri).toBe(400);
+    }
+  });
+
   it('stores tokens hashed, so the store leaks nothing usable', async () => {
     const { app, home } = setup();
     const client = await register(app);
